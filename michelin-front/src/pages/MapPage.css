@@ -1,0 +1,6 @@
+.maptiler-ctrl-logo,
+.maplibregl-ctrl-logo,
+.mapboxgl-ctrl-logo,
+a[href="https://www.maptiler.com/"] {
+  display: none !important;
+}
