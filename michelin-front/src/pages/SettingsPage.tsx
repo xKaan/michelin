@@ -19,7 +19,12 @@ export function SettingsPage() {
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between rounded-xl border border-border bg-card px-5 py-4">
           <span className="text-sm font-medium">{t('settings.language')}</span>
-          <Select value={i18n.language} onValueChange={(v) => i18n.changeLanguage(v)}>
+          <Select
+            value={i18n.language}
+            onValueChange={(value) => {
+              if (value) i18n.changeLanguage(value)
+            }}
+          >
             <SelectTrigger className="w-36">
               <SelectValue>
                 {i18n.language === 'fr' ? '🇫🇷 Français' : '🇬🇧 English'}
@@ -34,7 +39,12 @@ export function SettingsPage() {
 
         <div className="flex items-center justify-between rounded-xl border border-border bg-card px-5 py-4">
           <span className="text-sm font-medium">{t('settings.theme')}</span>
-          <Select value={theme} onValueChange={(v) => { if (v !== theme) toggle() }}>
+          <Select
+            value={theme}
+            onValueChange={(value) => {
+              if (value && value !== theme) toggle()
+            }}
+          >
             <SelectTrigger className="w-36">
               <SelectValue>
                 {theme === 'light' ? `☀️ ${t('settings.light')}` : `🌙 ${t('settings.dark')}`}

@@ -8,6 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { useAuth, useSignOut } from '@/hooks/useAuth'
 
 const items = [
   { key: 'map',     icon: MapPin,   path: '/map' },
@@ -20,6 +21,8 @@ export function BottomNav() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const { t } = useTranslation()
+  const { user } = useAuth()
+  const signOut = useSignOut()
 
   return (
     <nav className="sm:hidden fixed bottom-5 left-4 right-4 z-50 flex items-center justify-between">
@@ -54,7 +57,7 @@ export function BottomNav() {
           aria-label={t('header.profile')}
         >
           <img
-            src="https://api.dicebear.com/9.x/notionists/svg?seed=michelin"
+            src={`https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(user?.email ?? 'michelin')}`}
             alt="Profile"
             className="size-full object-cover"
           />
@@ -69,7 +72,13 @@ export function BottomNav() {
             {t('header.settings')}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem className="text-destructive focus:text-destructive">
+          <DropdownMenuItem
+            className="text-destructive focus:text-destructive"
+            onClick={async () => {
+              await signOut.mutateAsync()
+              navigate('/login', { replace: true })
+            }}
+          >
             <LogOut className="size-4" />
             {t('header.logout')}
           </DropdownMenuItem>

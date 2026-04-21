@@ -1,31 +1,39 @@
 import { useState } from 'react'
+import type { FormEvent } from 'react'
 import { useNavigate, Link } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useSignIn } from '@/hooks/useAuth'
 
 export function LoginPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const signIn = useSignIn()
+  const [email, setEmail] = useState('lea.martin.seed@michelin-local.test')
+  const [password, setPassword] = useState('SeedUser!2026')
   const [error, setError] = useState('')
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     if (!email || !password) {
       setError(t('login.errorRequired'))
       return
     }
-    // Mock auth — navigate to map on submit
-    navigate('/map')
+
+    try {
+      setError('')
+      await signIn.mutateAsync({ email, password })
+      navigate('/map', { replace: true })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('login.errorRequired'))
+    }
   }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6">
       <div className="w-full max-w-sm">
-        {/* Logo / brand */}
         <div className="mb-10 text-center">
           <span className="text-primary text-4xl font-bold tracking-tight">M</span>
           <h1 className="mt-2 text-xl font-semibold tracking-tight">{t('header.title')}</h1>
@@ -69,8 +77,8 @@ export function LoginPage() {
             <p className="text-sm text-destructive">{error}</p>
           )}
 
-          <Button type="submit" className="w-full mt-1">
-            {t('login.submit')}
+          <Button type="submit" className="w-full mt-1" disabled={signIn.isPending}>
+            {signIn.isPending ? 'Connexion...' : t('login.submit')}
           </Button>
         </form>
 

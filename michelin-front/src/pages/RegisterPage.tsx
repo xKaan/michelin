@@ -4,17 +4,19 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useSignUp } from '@/hooks/useAuth'
 
 export function RegisterPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const signUp = useSignUp()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [error, setError] = useState('')
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!name || !email || !password || !confirm) {
       setError(t('login.errorRequired'))
@@ -24,8 +26,18 @@ export function RegisterPage() {
       setError(t('register.errorPasswordMatch'))
       return
     }
-    // Mock auth — navigate to map on submit
-    navigate('/map')
+
+    try {
+      setError('')
+      await signUp.mutateAsync({
+        email,
+        password,
+        display_name: name,
+      })
+      navigate('/map', { replace: true })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('login.errorRequired'))
+    }
   }
 
   return (
@@ -88,8 +100,8 @@ export function RegisterPage() {
             <p className="text-sm text-destructive">{error}</p>
           )}
 
-          <Button type="submit" className="w-full mt-1">
-            {t('register.submit')}
+          <Button type="submit" className="w-full mt-1" disabled={signUp.isPending}>
+            {signUp.isPending ? 'Creation...' : t('register.submit')}
           </Button>
         </form>
 
