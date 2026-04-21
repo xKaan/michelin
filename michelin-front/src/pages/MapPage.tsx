@@ -3,12 +3,14 @@ import { LocateFixed } from 'lucide-react'
 import * as maptilersdk from '@maptiler/sdk'
 import '@maptiler/sdk/dist/maptiler-sdk.css'
 import './MapPage.css'
-import type { SelectedPoi } from '@/components/PoiCard'
+import { useAllEstablishments } from '@/hooks/useRestaurants'
+import type { EstablishmentView } from '@/types/database'
 
 maptilersdk.config.apiKey = import.meta.env.VITE_MAPTILER_KEY
 
 const STORAGE_KEY = 'map_position'
-const DEFAULT = { center: [2.3488, 48.8534] as [number, number], zoom: 17 }
+const LYON: [number, number] = [4.8357, 45.764]
+const DEFAULT = { center: LYON, zoom: 13 }
 
 function loadSavedPosition() {
   try {
@@ -18,15 +20,74 @@ function loadSavedPosition() {
   return DEFAULT
 }
 
-interface Props {
-  onPoiClick: (poi: SelectedPoi) => void
+function markerContent(status: string): string {
+  switch (status) {
+    case 'three': return '★★★'
+    case 'two':   return '★★'
+    case 'one':   return '★'
+    case 'bib':   return 'Bib'
+    default:      return '·'
+  }
 }
 
-export function MapPage({ onPoiClick }: Props) {
+function placeMarkers(
+  map: maptilersdk.Map,
+  data: EstablishmentView[],
+  markersRef: React.MutableRefObject<maptilersdk.Marker[]>,
+  onClickRef: React.MutableRefObject<(e: EstablishmentView) => void>,
+) {
+  markersRef.current.forEach(m => m.remove())
+  markersRef.current = []
+
+  data.forEach(e => {
+    if (e.lat == null || e.lng == null) return
+
+    const el = document.createElement('div')
+    el.className = `michelin-marker michelin-marker-${e.michelin_status}`
+    el.textContent = markerContent(e.michelin_status)
+
+    el.addEventListener('click', (ev) => {
+      ev.stopPropagation()
+      map.flyTo({ center: [e.lng!, e.lat!], zoom: 16, duration: 600 })
+      onClickRef.current(e)
+    })
+
+    const marker = new maptilersdk.Marker({ element: el })
+      .setLngLat([e.lng, e.lat])
+      .addTo(map)
+
+    markersRef.current.push(marker)
+  })
+}
+
+interface Props {
+  onEstablishmentClick: (e: EstablishmentView) => void
+}
+
+export function MapPage({ onEstablishmentClick }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maptilersdk.Map | null>(null)
+  const markersRef = useRef<maptilersdk.Marker[]>([])
+  const mapLoadedRef = useRef(false)
+  const establishmentsRef = useRef<EstablishmentView[]>([])
+  const onEstablishmentClickRef = useRef(onEstablishmentClick)
   const userPosRef = useRef<[number, number] | null>(null)
   const [located, setLocated] = useState(false)
+
+  const { data: establishments } = useAllEstablishments()
+
+  useEffect(() => {
+    onEstablishmentClickRef.current = onEstablishmentClick
+  }, [onEstablishmentClick])
+
+  // Update markers when establishments data arrives
+  useEffect(() => {
+    if (!establishments?.length) return
+    establishmentsRef.current = establishments
+    if (mapRef.current && mapLoadedRef.current) {
+      placeMarkers(mapRef.current, establishments, markersRef, onEstablishmentClickRef)
+    }
+  }, [establishments])
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
@@ -47,42 +108,27 @@ export function MapPage({ onPoiClick }: Props) {
       map.addImage(e.id, { width: 1, height: 1, data: new Uint8Array(4) })
     })
 
-    const KEEP_LAYERS = ['Food', 'Accommodation']
     const HIDE_SOURCE_LAYERS = [
       'poi_sport', 'poi_shopping', 'poi_transport', 'poi_healthcare',
       'poi_education', 'poi_public', 'poi_culture', 'poi_tourism',
+      'poi_food', 'poi_accommodation',
       'street_furniture', 'tree',
     ]
 
     map.on('load', () => {
+      mapLoadedRef.current = true
+
       map.getStyle().layers.forEach((l) => {
         const sl = (l as { 'source-layer'?: string })['source-layer']
-        if (sl && HIDE_SOURCE_LAYERS.includes(sl) && !KEEP_LAYERS.includes(l.id)) {
+        if (sl && HIDE_SOURCE_LAYERS.includes(sl)) {
           map.setLayoutProperty(l.id, 'visibility', 'none')
         }
       })
 
-      KEEP_LAYERS.forEach((id) => {
-        map.setLayerZoomRange(id, 10, 24)
-        map.setLayoutProperty(id, 'icon-size', 1.8)
-        map.setLayoutProperty(id, 'text-size', 13)
-        map.setPaintProperty(id, 'icon-color', '#cb0028')
-        map.setPaintProperty(id, 'text-color', '#cb0028')
-      })
-
-      map.on('click', (e) => {
-        const features = map.queryRenderedFeatures(
-          [[e.point.x - 8, e.point.y - 8], [e.point.x + 8, e.point.y + 8]],
-          { layers: KEEP_LAYERS }
-        )
-        if (!features.length) return
-        const f = features[0]
-        onPoiClick({
-          name: f.properties?.name,
-          class: f.properties?.class ?? f.properties?.type,
-          subclass: f.properties?.subclass,
-        })
-      })
+      // Place markers if data already loaded
+      if (establishmentsRef.current.length) {
+        placeMarkers(map, establishmentsRef.current, markersRef, onEstablishmentClickRef)
+      }
 
       navigator.geolocation.getCurrentPosition(({ coords }) => {
         const pos: [number, number] = [coords.longitude, coords.latitude]
@@ -121,15 +167,17 @@ export function MapPage({ onPoiClick }: Props) {
           },
         })
 
-        map.flyTo({ center: pos, zoom: 17 })
       })
     })
 
     return () => {
+      markersRef.current.forEach(m => m.remove())
+      markersRef.current = []
+      mapLoadedRef.current = false
       mapRef.current?.remove()
       mapRef.current = null
     }
-  }, [onPoiClick])
+  }, [])
 
   return (
     <div className="fixed inset-0 -z-10 sm:relative sm:inset-auto sm:z-auto sm:max-w-4xl sm:mx-auto sm:pt-8">

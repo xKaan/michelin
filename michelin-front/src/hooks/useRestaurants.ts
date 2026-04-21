@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
-import type { Establishment } from "@/types/database";
+import type { Establishment, EstablishmentView } from "@/types/database";
 
 interface Coords {
   lat: number;
@@ -22,6 +22,19 @@ export function useEstablishments(coords: Coords | null, radiusMeters = 5000) {
       return data ?? [];
     },
   });
+}
+
+export function useAllEstablishments() {
+  return useQuery<EstablishmentView[]>({
+    queryKey: ['establishments', 'all'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('establishments_view')
+        .select('*')
+      if (error) throw error
+      return data ?? []
+    },
+  })
 }
 
 export function useEstablishment(id: string | null) {

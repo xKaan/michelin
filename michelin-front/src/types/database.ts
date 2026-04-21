@@ -213,3 +213,8 @@ export interface UserProfile extends User {
 export interface ListWithItems extends List {
   list_items: (ListItem & { establishment: Establishment })[];
 }
+
+export interface EstablishmentView extends Omit<Establishment, 'coordinates'> {
+  lat: number
+  lng: number
+}
