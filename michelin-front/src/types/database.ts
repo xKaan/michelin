@@ -1,5 +1,6 @@
 export type Tier = "explorer" | "member" | "gourmet" | "expert";
 export type MichelinStatus = "none" | "bib" | "one" | "two" | "three";
+export type EstablishmentType = "restaurant" | "hotel";
 export type ReviewStatus = "pending" | "published" | "flagged";
 export type MediaType = "photo" | "video";
 export type ReactionType = "like" | "flag";
@@ -39,9 +40,10 @@ export interface Follow {
   created_at: string;
 }
 
-export interface Restaurant {
+export interface Establishment {
   id: string;
   name: string;
+  establishment_type: EstablishmentType;
   coordinates: string;
   address: string | null;
   city: string | null;
@@ -65,7 +67,7 @@ export interface UserQrCode {
 export interface Checkin {
   id: string;
   user_id: string;
-  restaurant_id: string;
+  establishment_id: string;
   qr_code_id: string | null;
   gps_at_scan: string | null;
   checked_in_at: string;
@@ -74,7 +76,7 @@ export interface Checkin {
 export interface Review {
   id: string;
   user_id: string;
-  restaurant_id: string;
+  establishment_id: string;
   checkin_id: string;
   rating: number;
   content: string | null;
@@ -152,7 +154,7 @@ export interface Outfit {
   description: string | null;
   rarity: OutfitRarity;
   unlock_condition: UnlockCondition;
-  restaurant_id: string | null;
+  establishment_id: string | null;
   preview_url: string | null;
   released_at: string | null;
 }
@@ -178,7 +180,7 @@ export interface List {
 export interface ListItem {
   id: string;
   list_id: string;
-  restaurant_id: string;
+  establishment_id: string;
   added_at: string;
 }
 
@@ -209,5 +211,5 @@ export interface UserProfile extends User {
 }
 
 export interface ListWithItems extends List {
-  list_items: (ListItem & { restaurant: Restaurant })[];
+  list_items: (ListItem & { establishment: Establishment })[];
 }

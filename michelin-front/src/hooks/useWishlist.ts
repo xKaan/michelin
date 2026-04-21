@@ -13,7 +13,7 @@ export function useWishlist(userId: string | null) {
           *,
           list_items(
             *,
-            restaurant:restaurants(*)
+            establishment:establishments(*)
           )
         `)
         .eq("user_id", userId!)
@@ -49,14 +49,14 @@ export function useAddToList() {
   return useMutation({
     mutationFn: async ({
       list_id,
-      restaurant_id,
+      establishment_id,
     }: {
       list_id: string;
-      restaurant_id: string;
+      establishment_id: string;
     }) => {
       const { data, error } = await supabase
         .from("list_items")
-        .insert({ list_id, restaurant_id })
+        .insert({ list_id, establishment_id })
         .select()
         .single();
       if (error) throw error;
@@ -73,16 +73,16 @@ export function useRemoveFromList() {
   return useMutation({
     mutationFn: async ({
       list_id,
-      restaurant_id,
+      establishment_id,
     }: {
       list_id: string;
-      restaurant_id: string;
+      establishment_id: string;
     }) => {
       const { error } = await supabase
         .from("list_items")
         .delete()
         .eq("list_id", list_id)
-        .eq("restaurant_id", restaurant_id);
+        .eq("establishment_id", establishment_id);
       if (error) throw error;
     },
     onSuccess: () => {

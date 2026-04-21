@@ -2,10 +2,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import type { Review, ReviewWithMedia } from "@/types/database";
 
-export function useReviews(restaurantId: string | null) {
+export function useReviews(establishmentId: string | null) {
   return useQuery<ReviewWithMedia[]>({
-    queryKey: ["reviews", restaurantId],
-    enabled: !!restaurantId,
+    queryKey: ["reviews", establishmentId],
+    enabled: !!establishmentId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("reviews")
@@ -14,7 +14,7 @@ export function useReviews(restaurantId: string | null) {
           media(*),
           user:users(id, display_name, tier)
         `)
-        .eq("restaurant_id", restaurantId!)
+        .eq("establishment_id", establishmentId!)
         .eq("status", "published")
         .order("published_at", { ascending: false });
       if (error) throw error;
@@ -27,7 +27,7 @@ export function useCreateReview() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: {
-      restaurant_id: string;
+      establishment_id: string;
       checkin_id: string;
       rating: number;
       content?: string;
@@ -43,7 +43,7 @@ export function useCreateReview() {
       return data as Review;
     },
     onSuccess: (data) => {
-      qc.invalidateQueries({ queryKey: ["reviews", data.restaurant_id] });
+      qc.invalidateQueries({ queryKey: ["reviews", data.establishment_id] });
     },
   });
 }

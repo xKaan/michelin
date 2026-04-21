@@ -1,19 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
-import type { Restaurant } from "@/types/database";
+import type { Establishment } from "@/types/database";
 
 interface Coords {
   lat: number;
   lng: number;
 }
 
-export function useRestaurants(coords: Coords | null, radiusMeters = 5000) {
-  return useQuery<Restaurant[]>({
-    queryKey: ["restaurants", coords?.lat, coords?.lng, radiusMeters],
+export function useEstablishments(coords: Coords | null, radiusMeters = 5000) {
+  return useQuery<Establishment[]>({
+    queryKey: ["establishments", coords?.lat, coords?.lng, radiusMeters],
     enabled: !!coords,
     queryFn: async () => {
       if (!coords) return [];
-      const { data, error } = await supabase.rpc("restaurants_nearby", {
+      const { data, error } = await supabase.rpc("establishments_nearby", {
         lat: coords.lat,
         lng: coords.lng,
         radius_m: radiusMeters,
@@ -24,18 +24,18 @@ export function useRestaurants(coords: Coords | null, radiusMeters = 5000) {
   });
 }
 
-export function useRestaurant(id: string | null) {
+export function useEstablishment(id: string | null) {
   return useQuery({
-    queryKey: ["restaurant", id],
+    queryKey: ["establishment", id],
     enabled: !!id,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("restaurants")
+        .from("establishments")
         .select("*")
         .eq("id", id!)
         .single();
       if (error) throw error;
-      return data as Restaurant;
+      return data as Establishment;
     },
   });
 }
