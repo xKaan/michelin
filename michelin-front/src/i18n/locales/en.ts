@@ -4,6 +4,7 @@ export default {
     home: 'Home',
     map: 'Map',
     social: 'Social',
+    login: 'Login',
     darkMode: 'Dark mode',
     lightMode: 'Light mode',
     profile: 'Profile',

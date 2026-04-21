@@ -4,6 +4,7 @@ export default {
     home: 'Accueil',
     map: 'Carte',
     social: 'Social',
+    login: 'Connexion',
     darkMode: 'Mode sombre',
     lightMode: 'Mode clair',
     profile: 'Profil',

@@ -10,11 +10,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useTheme } from '@/hooks/useTheme'
+import { useAuth, useSignOut } from '@/hooks/useAuth'
 
 export function Header() {
   const { theme, toggle } = useTheme()
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const signOut = useSignOut()
 
   return (
     <header className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-6xl">
@@ -32,7 +35,7 @@ export function Header() {
               <Map className="size-4" />
               {t('header.map')}
             </Button>
-            <Button variant="ghost" size="sm" className="gap-2 text-xs font-medium">
+            <Button variant="ghost" size="sm" className="gap-2 text-xs font-medium" onClick={() => navigate('/social')}>
               <Users className="size-4" />
               {t('header.social')}
             </Button>
@@ -48,33 +51,45 @@ export function Header() {
             </div>
 
             {/* Profile dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                className="size-8 rounded-full overflow-hidden ring-2 ring-primary/40 hover:ring-primary transition-all focus:outline-none flex items-center justify-center p-0"
-                aria-label="Profile"
-              >
-                <img
-                  src="https://api.dicebear.com/9.x/notionists/svg?seed=michelin"
-                  alt="Profile"
-                  className="size-full object-cover"
-                />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-44">
-                <DropdownMenuItem onClick={() => navigate('/profile')}>
-                  <UserRound className="size-4" />
-                  {t('header.profile')}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/settings')}>
-                  <Settings className="size-4" />
-                  {t('header.settings')}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-destructive focus:text-destructive">
-                  <LogOut className="size-4" />
-                  {t('header.logout')}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  className="size-8 rounded-full overflow-hidden ring-2 ring-primary/40 hover:ring-primary transition-all focus:outline-none flex items-center justify-center p-0"
+                  aria-label="Profile"
+                >
+                  <img
+                    src={`https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(user.email ?? 'michelin')}`}
+                    alt="Profile"
+                    className="size-full object-cover"
+                  />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-44">
+                  <DropdownMenuItem onClick={() => navigate('/profile')}>
+                    <UserRound className="size-4" />
+                    {t('header.profile')}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/settings')}>
+                    <Settings className="size-4" />
+                    {t('header.settings')}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onClick={async () => {
+                      await signOut.mutateAsync()
+                      navigate('/login', { replace: true })
+                    }}
+                  >
+                    <LogOut className="size-4" />
+                    {t('header.logout')}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button variant="default" size="sm" className="text-xs font-medium" onClick={() => navigate('/login')}>
+                {t('header.login')}
+              </Button>
+            )}
 
           </div>
         </div>

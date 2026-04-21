@@ -19,8 +19,6 @@ export function MapPage() {
       zoom: 12,
       geolocateControl: false,
       navigationControl: false,
-      attributionControl: false,
-      logoControl: false,
     })
 
     return () => {
