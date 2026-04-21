@@ -1,15 +1,18 @@
 export default {
   header: {
     title: 'Michelin Guide',
-    home: 'Home',
-    map: 'Map',
-    social: 'Social',
-    login: 'Login',
+    search: 'Search…',
     darkMode: 'Dark mode',
     lightMode: 'Light mode',
     profile: 'Profile',
     settings: 'Settings',
     logout: 'Log out',
+  },
+  nav: {
+    map: 'Map',
+    social: 'Social',
+    explore: 'Explore',
+    save: 'Save',
   },
   settings: {
     title: 'Settings',
@@ -22,5 +25,23 @@ export default {
     title: 'Profile',
     name: 'Name',
     email: 'Email',
+  },
+  register: {
+    subtitle: 'Create your account',
+    name: 'Full name',
+    confirmPassword: 'Confirm password',
+    submit: 'Create account',
+    hasAccount: 'Already have an account?',
+    errorPasswordMatch: 'Passwords do not match.',
+  },
+  login: {
+    subtitle: 'Sign in to your account',
+    email: 'Email',
+    password: 'Password',
+    forgotPassword: 'Forgot password?',
+    submit: 'Sign in',
+    noAccount: "Don't have an account?",
+    signUp: 'Sign up',
+    errorRequired: 'Please fill in all fields.',
   },
 }
