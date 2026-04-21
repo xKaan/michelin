@@ -1,14 +1,18 @@
 export default {
   header: {
     title: 'Guide Michelin',
-    home: 'Accueil',
-    map: 'Carte',
-    social: 'Social',
+    search: 'Rechercher…',
     darkMode: 'Mode sombre',
     lightMode: 'Mode clair',
     profile: 'Profil',
     settings: 'Paramètres',
     logout: 'Se déconnecter',
+  },
+  nav: {
+    map: 'Carte',
+    social: 'Social',
+    explore: 'Explorer',
+    save: 'Sauvegarder',
   },
   settings: {
     title: 'Paramètres',
@@ -21,5 +25,23 @@ export default {
     title: 'Profil',
     name: 'Nom',
     email: 'Email',
+  },
+  register: {
+    subtitle: 'Créez votre compte',
+    name: 'Nom complet',
+    confirmPassword: 'Confirmer le mot de passe',
+    submit: 'Créer un compte',
+    hasAccount: 'Déjà un compte ?',
+    errorPasswordMatch: 'Les mots de passe ne correspondent pas.',
+  },
+  login: {
+    subtitle: 'Connectez-vous à votre compte',
+    email: 'Email',
+    password: 'Mot de passe',
+    forgotPassword: 'Mot de passe oublié ?',
+    submit: 'Se connecter',
+    noAccount: 'Pas encore de compte ?',
+    signUp: "S'inscrire",
+    errorRequired: 'Veuillez remplir tous les champs.',
   },
 }
