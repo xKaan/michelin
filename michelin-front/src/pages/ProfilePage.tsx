@@ -1,21 +1,53 @@
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useProfile";
-import { ChevronLeft, MoreHorizontal, ChevronRight, BadgeCheck } from "lucide-react";
-import { useMemo } from "react";
+import { useUserMascot, resolveBuddyImage } from "@/hooks/useMascot";
+import { ChevronLeft, MoreHorizontal, ChevronRight, BadgeCheck, Palette } from "lucide-react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
+import { QrCodeDisplay } from "@/components/QrCodeDisplay";
+import { AppearanceSheet } from "@/components/AppearanceSheet";
+import type { Badge as DBBadge } from "@/types/database";
+
+// badge_type → image locale
+const BADGE_IMAGES: Record<string, string> = {
+  first_visit:  "/Badges/badge_1.png",
+  three_stars:  "/Badges/badge_2.png",
+  truffle:      "/Badges/badge_3.png",
+  streak_7:     "/Badges/badge_4.png",
+  gourmet_tier: "/Badges/badge_5.png",
+  expert_tier:  "/Badges/badge_6.png",
+};
+
+const BADGE_LABELS: Record<string, string> = {
+  first_visit:  "Première visite",
+  three_stars:  "3 étoiles !",
+  truffle:      "Truffé",
+  streak_7:     "Streak ×7",
+  gourmet_tier: "Gourmet",
+  expert_tier:  "Expert",
+};
 
 // --- Types ---
 interface Badge {
   id: string;
   label: string;
   date: string;
-  image?: string; // optional real image, falls back to placeholder
+  image?: string;
+}
+
+function dbBadgeToDisplay(b: DBBadge): Badge {
+  return {
+    id: b.id,
+    label: BADGE_LABELS[b.badge_type] ?? b.badge_type,
+    date: new Date(b.earned_at).toLocaleDateString("fr-FR"),
+    image: BADGE_IMAGES[b.badge_type],
+  };
 }
 
 interface NotebookEntry {
   id: string;
-  image?: string; // optional real image, falls back to placeholder
+  image?: string;
 }
 
 // --- Tier helpers ---
@@ -31,26 +63,19 @@ function getTierLabel(tier: string): string {
   return TIER_LABELS[tier] ?? tier;
 }
 
-/** Compute level from total XP (100 XP per level, simple formula). */
 function xpToLevel(xp: number): number {
   return Math.floor(xp / 400) + 1;
 }
 
-// --- Mock data (replace with real API data as needed) ---
-const MOCK_BADGES: Badge[] = [
-  { id: "1", label: "Première visite", date: "01/09/2025", image: "/Badges/badge_1.png" },
-  { id: "2", label: "3 étoiles !", date: "10/02/2026", image: "/Badges/badge_2.png" },
-  { id: "3", label: "Truffé", date: "21/03/2026", image: "/Badges/badge_3.png" },
-  { id: "4", label: "Str…", date: "30/0…", image: "/Badges/badge_4.png" },
+const MOCK_NOTEBOOK: NotebookEntry[] = [
+  { id: "1", image: "/Restaurants/resto_1.webp" },
+  { id: "2", image: "/Restaurants/resto_2.webp" },
+  { id: "3", image: "/Restaurants/resto_3.webp" },
 ];
-
-const MOCK_NOTEBOOK: NotebookEntry[] = [{ id: "1", image: "/Restaurants/resto_1.webp" }, { id: "2", image: "/Restaurants/resto_2.webp" }, { id: "3", image: "/Restaurants/resto_3.webp" }];
 
 // --- Sub-components ---
 
-function BackButton(
-  { onClick }: { onClick?: () => void }
-) {
+function BackButton({ onClick }: { onClick?: () => void }) {
   return (
     <button
       aria-label="Retour"
@@ -62,28 +87,44 @@ function BackButton(
   );
 }
 
-function MoreButton() {
+function MoreButton({ onAppearance }: { onAppearance: () => void }) {
+  const [open, setOpen] = useState(false);
   return (
-    <button
-      aria-label="Plus d'options"
-      className="size-9 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-sm shadow-sm text-foreground"
-    >
-      <MoreHorizontal className="size-5" />
-    </button>
+    <div className="relative">
+      <button
+        aria-label="Plus d'options"
+        className="size-9 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-sm shadow-sm text-foreground"
+        onClick={() => setOpen((v) => !v)}
+      >
+        <MoreHorizontal className="size-5" />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-11 z-20 min-w-[160px] rounded-xl bg-background shadow-lg border border-border overflow-hidden">
+            <button
+              className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-medium hover:bg-muted transition-colors"
+              onClick={() => { setOpen(false); onAppearance(); }}
+            >
+              <Palette className="size-4 text-muted-foreground" />
+              Apparence
+            </button>
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 
-function HeroBanner({ buddyImg }: { buddyImg?: string }) {
-  const navigate = useNavigate()
+function HeroBanner({ buddyImg, onAppearance }: { buddyImg?: string; onAppearance: () => void }) {
+  const navigate = useNavigate();
   return (
     <div className="relative w-full h-[320px] bg-[#dde0ef] overflow-hidden flex items-end justify-center">
-      {/* Navigation overlay */}
       <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10">
         <BackButton onClick={() => navigate(-1)} />
-        <MoreButton />
+        <MoreButton onAppearance={onAppearance} />
       </div>
 
-      {/* Buddy character — swap buddyImg for real PNG */}
       {buddyImg ? (
         <img
           src={buddyImg}
@@ -92,7 +133,6 @@ function HeroBanner({ buddyImg }: { buddyImg?: string }) {
           draggable={false}
         />
       ) : (
-        /* Placeholder silhouette */
         <div className="h-[240px] w-[180px] mb-2 rounded-3xl bg-white/30 flex items-center justify-center text-white/50 text-xs select-none">
           buddy.png
         </div>
@@ -105,40 +145,15 @@ function XPLevelPill({ xp, level }: { xp: number; level: number }) {
   return (
     <div className="inline-flex items-center gap-3 rounded-full bg-foreground text-background px-3 py-2 text-sm font-semibold shadow-md">
       <span className="px-4 flex flex-col gap-1 items-center">
-        <span className="text-xs font-normal mr-1">
-          Points d'xp
-        </span>
-        <span className="text-xl">
-          {xp.toLocaleString("fr-FR")}
-        </span>
+        <span className="text-xs font-normal mr-1">Points d'xp</span>
+        <span className="text-xl">{xp.toLocaleString("fr-FR")}</span>
       </span>
       <div className="w-px h-6 bg-background/20" />
       <span className="px-4 flex flex-col gap-1 items-center">
-        <span className="text-xs font-normal mr-1">
-          Niveau
-        </span>
-        <span className="text-xl">
-          {level}
-        </span>
+        <span className="text-xs font-normal mr-1">Niveau</span>
+        <span className="text-xl">{level}</span>
       </span>
     </div>
-  );
-}
-
-function VerifiedBadge() {
-  return (
-    <svg
-      className="inline-block size-5 ml-1.5 text-primary align-middle"
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      aria-label="Vérifié"
-    >
-      <path
-        fillRule="evenodd"
-        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
-        clipRule="evenodd"
-      />
-    </svg>
   );
 }
 
@@ -160,13 +175,8 @@ function BadgeCard({ badge }: { badge: Badge }) {
     <div className="flex flex-col items-center gap-1.5 min-w-[72px]">
       <div className="size-[72px] rounded-full overflow-hidden bg-amber-900/20 flex items-center justify-center shadow-inner">
         {badge.image ? (
-          <img
-            src={badge.image}
-            alt={badge.label}
-            className="size-full object-cover"
-          />
+          <img src={badge.image} alt={badge.label} className="size-full object-cover" />
         ) : (
-          /* Placeholder gradient circle */
           <div className="size-full bg-gradient-to-br from-amber-700 to-amber-900 rounded-full flex items-center justify-center text-white/30 text-[10px]">
             🏅
           </div>
@@ -184,11 +194,7 @@ function NotebookCard({ entry }: { entry: NotebookEntry }) {
   return (
     <div className="w-[100px] aspect-[3/2] rounded-xl overflow-hidden bg-muted flex-shrink-0 shadow-sm">
       {entry.image ? (
-        <img
-          src={entry.image}
-          alt="Carnet"
-          className="size-full object-cover"
-        />
+        <img src={entry.image} alt="Carnet" className="size-full object-cover" />
       ) : (
         <div className="size-full bg-gradient-to-br from-muted to-muted-foreground/20 flex items-center justify-center text-muted-foreground/40 text-xs">
           photo
@@ -226,16 +232,20 @@ export function ProfilePage() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { data: profile, isLoading, error } = useUserProfile(user?.id ?? null);
+  const { data: mascot } = useUserMascot(user?.id ?? null);
 
   const displayName =
     profile?.display_name ?? user?.user_metadata?.display_name ?? "Sans nom";
-  const email = profile?.email ?? user?.email ?? "email@exemple.com";
   const tier = profile?.tier ?? "novice";
   const xpTotal = profile?.xp_total ?? 0;
   const level = useMemo(() => xpToLevel(xpTotal), [xpTotal]);
 
-  // Buddy image: replace with real path/URL when available
-  const buddyImg: string | undefined = '/Buddy_skins/Mitch_jap.png'; // e.g. '/assets/buddy.png'
+  const buddyImg = resolveBuddyImage(mascot);
+  const badges = useMemo(
+    () => (profile?.badges ?? []).map(dbBadgeToDisplay),
+    [profile?.badges],
+  );
+  const [appearanceOpen, setAppearanceOpen] = useState(false);
 
   if (isLoading) return <LoadingState />;
   if (error) return <ErrorState message={error.message} />;
@@ -243,7 +253,8 @@ export function ProfilePage() {
   return (
     <div className="max-w-lg mx-auto bg-background min-h-screen overflow-x-hidden">
       {/* Hero with buddy character */}
-      <HeroBanner buddyImg={buddyImg} />
+      <HeroBanner buddyImg={buddyImg} onAppearance={() => setAppearanceOpen(true)} />
+      <AppearanceSheet open={appearanceOpen} onClose={() => setAppearanceOpen(false)} />
 
       {/* White card sheet — overlaps the hero slightly */}
       <div className="relative -mt-6 rounded-t-[40px] bg-background px-5 pt-6 pb-12 z-10 shadow-[0_-4px_24px_rgba(0,0,0,0.08)]">
@@ -251,7 +262,7 @@ export function ProfilePage() {
         <div className="flex flex-col items-center text-center gap-1 mb-5">
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             {displayName}
-<BadgeCheck fill="#cb0028" stroke="white" />
+            <BadgeCheck fill="#cb0028" stroke="white" />
           </h1>
           <p className="text-sm text-muted-foreground">{getTierLabel(tier)}</p>
         </div>
@@ -264,20 +275,32 @@ export function ProfilePage() {
         {/* Badges section */}
         <section className="mb-8">
           <SectionHeader label={t("profile.badges", "Badges")} href="#" />
-          <div className="flex gap-4 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-none">
-            {MOCK_BADGES.map((badge) => (
-              <BadgeCard key={badge.id} badge={badge} />
-            ))}
-          </div>
+          {badges.length > 0 ? (
+            <div className="flex gap-4 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-none">
+              {badges.map((badge) => (
+                <BadgeCard key={badge.id} badge={badge} />
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Aucun badge pour l'instant.</p>
+          )}
         </section>
 
         {/* Notebook section */}
-        <section>
+        <section className="mb-8">
           <SectionHeader label={t("profile.notebook", "Mon carnet")} href="#" />
           <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-none">
             {MOCK_NOTEBOOK.map((entry) => (
               <NotebookCard key={entry.id} entry={entry} />
             ))}
+          </div>
+        </section>
+
+        {/* QR Code */}
+        <section>
+          <SectionHeader label={t("profile.qrcode", "Mon QR code")} />
+          <div className="rounded-xl border border-border bg-card px-5 py-6 flex flex-col items-center">
+            <QrCodeDisplay tier={tier} />
           </div>
         </section>
       </div>

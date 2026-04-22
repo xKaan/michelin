@@ -13,7 +13,12 @@ export type NotificationType =
   | "wishlist_nearby"
   | "friend_checkin"
   | "streak_reminder"
-  | "outfit_unlocked";
+  | "outfit_unlocked"
+  | "tier_upgrade"
+  | "reward_unlocked";
+
+export type RewardType = "drink" | "food" | "discount" | "other";
+export type RewardStatus = "available" | "claimed" | "expired";
 
 export interface User {
   id: string;
@@ -214,6 +219,31 @@ export interface UserProfile extends User {
 
 export interface ListWithItems extends List {
   list_items: (ListItem & { establishment: Establishment })[];
+}
+
+export interface Reward {
+  id: string;
+  establishment_id: string;
+  name: string;
+  description: string | null;
+  reward_type: RewardType;
+  min_tier: Tier;
+  min_xp: number;
+  is_active: boolean;
+  valid_from: string | null;
+  valid_until: string | null;
+  created_at: string;
+}
+
+export interface UserReward {
+  id: string;
+  user_id: string;
+  reward_id: string;
+  checkin_id: string | null;
+  status: RewardStatus;
+  unlocked_at: string;
+  claimed_at: string | null;
+  expires_at: string | null;
 }
 
 export interface EstablishmentView extends Omit<Establishment, 'coordinates'> {
