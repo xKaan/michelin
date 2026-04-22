@@ -9,6 +9,7 @@ import {
   resolveMascotImage,
   type UserMascotFull,
 } from "@/hooks/useMascot";
+import { useUserProfile, useUpdateProfile } from "@/hooks/useProfile";
 import { cn } from "@/lib/utils";
 
 interface AppearanceSheetProps {
@@ -16,19 +17,39 @@ interface AppearanceSheetProps {
   onClose: () => void;
 }
 
-type Tab = "buddy" | "tenues";
+type Tab = "buddy" | "tenues" | "couleur";
+
+const AVATAR_COLORS = [
+  { label: "Michelin", value: "#cb0028" },
+  { label: "Nuit", value: "#1a1a2e" },
+  { label: "Marine", value: "#0f3460" },
+  { label: "Indigo", value: "#3730a3" },
+  { label: "Violet", value: "#7c3aed" },
+  { label: "Rose", value: "#be185d" },
+  { label: "Corail", value: "#e11d48" },
+  { label: "Ember", value: "#c2410c" },
+  { label: "Ambre", value: "#b45309" },
+  { label: "Forêt", value: "#15803d" },
+  { label: "Sarcelle", value: "#0f766e" },
+  { label: "Ardoise", value: "#334155" },
+];
 
 export function AppearanceSheet({ open, onClose }: AppearanceSheetProps) {
   const { user } = useAuth();
   const [tab, setTab] = useState<Tab>("buddy");
   const { data: mascots = [], isLoading } = useAllUserMascots(open ? (user?.id ?? null) : null);
+  const { data: profile } = useUserProfile(open ? (user?.id ?? null) : null);
   const setActive = useSetActiveMascot();
   const equipOutfit = useEquipOutfit();
   const unequipAll = useUnequipAllOutfits();
+  const updateProfile = useUpdateProfile();
 
   const activeMascot = mascots.find((m) => m.is_active) ?? null;
+  const currentColor = profile?.avatar_color ?? "#dde0ef";
 
   if (!open) return null;
+
+  const TAB_LABELS: Record<Tab, string> = { buddy: "Familier", tenues: "Tenues", couleur: "Couleur" };
 
   return (
     <>
@@ -50,7 +71,7 @@ export function AppearanceSheet({ open, onClose }: AppearanceSheetProps) {
         </div>
 
         <div className="flex mx-5 mb-4 rounded-xl bg-muted p-1 gap-1">
-          {(["buddy", "tenues"] as Tab[]).map((t) => (
+          {(["buddy", "tenues", "couleur"] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -59,7 +80,7 @@ export function AppearanceSheet({ open, onClose }: AppearanceSheetProps) {
                 tab === t ? "bg-background text-foreground shadow-sm" : "text-muted-foreground",
               )}
             >
-              {t === "buddy" ? "Familier" : "Tenues"}
+              {TAB_LABELS[t]}
             </button>
           ))}
         </div>
@@ -79,7 +100,7 @@ export function AppearanceSheet({ open, onClose }: AppearanceSheetProps) {
               }}
               isPending={setActive.isPending}
             />
-          ) : (
+          ) : tab === "tenues" ? (
             <TenuesTab
               activeMascot={activeMascot}
               onEquip={(userOutfitId, userMascotId) => {
@@ -92,10 +113,68 @@ export function AppearanceSheet({ open, onClose }: AppearanceSheetProps) {
               }}
               isPending={equipOutfit.isPending || unequipAll.isPending}
             />
+          ) : (
+            <ColorTab
+              currentColor={currentColor}
+              avatarUrl={activeMascot?.head_url ?? `https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(user?.email ?? 'me')}&size=80`}
+              isPending={updateProfile.isPending}
+              onSelect={(color) => updateProfile.mutate({ avatar_color: color })}
+            />
           )}
         </div>
       </div>
     </>
+  );
+}
+
+// --- Color tab ---
+
+function ColorTab({
+  currentColor,
+  avatarUrl,
+  isPending,
+  onSelect,
+}: {
+  currentColor: string;
+  avatarUrl: string;
+  isPending: boolean;
+  onSelect: (color: string) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-5">
+      {/* Preview */}
+      <div className="flex justify-center">
+        <div
+          className="size-20 rounded-full overflow-hidden transition-all"
+          style={{ backgroundColor: currentColor }}
+        >
+          <img src={avatarUrl} alt="preview" className="size-full object-cover" />
+        </div>
+      </div>
+
+      {/* Palette */}
+      <div className="grid grid-cols-6 gap-3">
+        {AVATAR_COLORS.map(({ label, value }) => {
+          const isSelected = currentColor === value;
+          return (
+            <button
+              key={value}
+              disabled={isPending}
+              onClick={() => onSelect(value)}
+              title={label}
+              className="relative size-11 rounded-full transition-transform active:scale-90 disabled:opacity-50 mx-auto"
+              style={{ backgroundColor: value }}
+            >
+              {isSelected && (
+                <span className="absolute inset-0 flex items-center justify-center">
+                  <Check className="size-5 text-white drop-shadow-sm stroke-[3]" />
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 

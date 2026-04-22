@@ -29,6 +29,7 @@ export interface User {
   tier: Tier;
   xp_total: number;
   last_location: string | null;
+  avatar_color: string;
   created_at: string;
   critic_type: CriticType | null;
 }
