@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useAuth, useSignOut } from '@/hooks/useAuth'
+import { useUserMascot } from '@/hooks/useMascot'
 
 const items = [
   { key: 'map',     icon: MapPin,   path: '/map' },
@@ -22,7 +23,10 @@ export function BottomNav() {
   const { pathname } = useLocation()
   const { t } = useTranslation()
   const { user } = useAuth()
+  const { data: mascot } = useUserMascot(user?.id ?? null)
   const signOut = useSignOut()
+
+  const avatarUrl = mascot?.head_url ?? `https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(user?.email ?? 'michelin')}`
 
   return (
     <nav className="sm:hidden fixed bottom-5 left-4 right-4 z-50 flex items-center justify-between">
@@ -57,9 +61,13 @@ export function BottomNav() {
           aria-label={t('header.profile')}
         >
           <img
-            src={`https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(user?.email ?? 'michelin')}`}
+            src={avatarUrl}
             alt="Profile"
             className="size-full object-cover"
+            key={avatarUrl}
+            onError={(e) => {
+              e.currentTarget.src = `https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(user?.email ?? 'michelin')}`
+            }}
           />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" side="top" className="w-44 mb-2">

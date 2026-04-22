@@ -210,11 +210,13 @@ export interface ReviewWithMedia extends Review {
 export interface UserMascotWithOutfit extends UserMascot {
   mascot: Mascot;
   equipped_outfit: (UserOutfit & { outfit: Outfit }) | null;
+  head_url?: string;
 }
 
 export interface UserProfile extends User {
   streak: Streak | null;
   badges: Badge[];
+  mascot: UserMascotWithOutfit | null;
 }
 
 export interface ListWithItems extends List {

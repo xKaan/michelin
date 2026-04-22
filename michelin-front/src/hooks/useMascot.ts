@@ -7,6 +7,7 @@ function invalidateMascotQueries(qc: QueryClient, userId: string, userMascotId?:
   if (userMascotId) qc.invalidateQueries({ queryKey: ["user-outfits", userMascotId] });
   qc.invalidateQueries({ queryKey: ["user-mascot", userId] });
   qc.invalidateQueries({ queryKey: ["user-mascots-all", userId] });
+  qc.invalidateQueries({ queryKey: ["user-profile", userId] });
 }
 
 export function useUserMascot(userId: string | null) {
@@ -33,13 +34,23 @@ export function useUserMascot(userId: string | null) {
       const equipped = ((data.user_outfits ?? []) as (UserOutfit & { outfit: Outfit })[])
         .find((o) => o.is_equipped) ?? null;
 
-      return { ...data, user_outfits: undefined, equipped_outfit: equipped } as UserMascotWithOutfit;
+      const mascotWithOutfit = { 
+        ...data, 
+        user_outfits: undefined, 
+        equipped_outfit: equipped 
+      } as UserMascotWithOutfit;
+
+      return { 
+        ...mascotWithOutfit,
+        head_url: resolveBuddyHead(mascotWithOutfit)
+      } as UserMascotWithOutfit & { head_url: string };
     },
   });
 }
 
 export type UserMascotFull = UserMascotWithOutfit & {
   outfits: (UserOutfit & { outfit: Outfit })[];
+  head_url: string;
 };
 
 export function useAllUserMascots(userId: string | null) {
@@ -65,11 +76,17 @@ export function useAllUserMascots(userId: string | null) {
         .map((row) => {
           const outfits = ((row.user_outfits ?? []) as (UserOutfit & { outfit: Outfit })[])
             .sort((a, b) => a.id.localeCompare(b.id));
-          return {
+          
+          const mascotWithOutfit = {
             ...row,
             user_outfits: undefined,
             equipped_outfit: outfits.find((o) => o.is_equipped) ?? null,
             outfits,
+          } as UserMascotFull;
+
+          return {
+            ...mascotWithOutfit,
+            head_url: resolveBuddyHead(mascotWithOutfit),
           } as UserMascotFull;
         });
     },
@@ -100,6 +117,24 @@ export function resolveMascotImage(row: { mascot: Mascot; equipped_outfit: (User
 
 export function resolveBuddyImage(mascot: UserMascotWithOutfit | null | undefined): string | undefined {
   return mascot ? resolveMascotImage(mascot) : undefined;
+}
+
+export function resolveBuddyHead(mascot: UserMascotWithOutfit | null | undefined): string | undefined {
+  if (!mascot) return undefined;
+  
+  // Try outfit-specific head first if one is equipped
+  // We use the preview_url filename to match the head filename
+  if (mascot.equipped_outfit?.outfit?.preview_url) {
+    const previewUrl = mascot.equipped_outfit.outfit.preview_url;
+    // Extract filename without extension (e.g., "/Buddy_skins/Hoshi_fr.png" -> "Hoshi_fr")
+    const filename = previewUrl.split('/').pop()?.split('.')[0];
+    if (filename) {
+      return `/Buddy/Heads/${filename}_head.png`;
+    }
+  }
+  
+  // Fallback to base mascot head
+  return `/Buddy/Heads/${mascot.mascot.name}_head.png`;
 }
 
 export function useUserOutfits(userMascotId: string | null) {

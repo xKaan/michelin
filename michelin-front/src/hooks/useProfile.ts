@@ -1,28 +1,66 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
-import type { UserProfile, Badge, Streak } from "@/types/database";
+import type { UserProfile, Badge, Streak, UserMascotWithOutfit, UserOutfit, Outfit } from "@/types/database";
+import { resolveBuddyHead } from "@/hooks/useMascot";
 
 export function useUserProfile(userId: string | null) {
   return useQuery<UserProfile | null>({
     queryKey: ["user-profile", userId],
     enabled: !!userId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("users")
-        .select(`
-          *,
-          streak:streaks(*),
-          badges(*)
-        `)
-        .eq("id", userId!)
-        .maybeSingle();
-      if (error) throw error;
-      if (!data) return null;
+      const [userRes, mascotRes] = await Promise.all([
+        supabase
+          .from("users")
+          .select(`
+            *,
+            streak:streaks(*),
+            badges(*)
+          `)
+          .eq("id", userId!)
+          .maybeSingle(),
+        supabase
+          .from("user_mascots")
+          .select(`
+            *,
+            mascot:mascots(*),
+            user_outfits(
+              *,
+              outfit:outfits(*)
+            )
+          `)
+          .eq("user_id", userId!)
+          .eq("is_active", true)
+          .maybeSingle()
+      ]);
+
+      if (userRes.error) throw userRes.error;
+      if (!userRes.data) return null;
+
+      const userData = userRes.data;
+      const mascotData = mascotRes.data;
+
+      let mascot: UserProfile["mascot"] = null;
+      if (mascotData) {
+        const equipped = ((mascotData.user_outfits ?? []) as (UserOutfit & { outfit: Outfit })[])
+          .find((o) => o.is_equipped) ?? null;
+        
+        const mascotWithOutfit = { 
+          ...mascotData, 
+          user_outfits: undefined, 
+          equipped_outfit: equipped,
+        } as UserMascotWithOutfit;
+
+        mascot = {
+          ...mascotWithOutfit,
+          head_url: resolveBuddyHead(mascotWithOutfit)
+        };
+      }
 
       return {
-        ...data,
-        streak: (data.streak as Streak[] | null)?.[0] ?? null,
-        badges: (data.badges as Badge[]) ?? [],
+        ...userData,
+        streak: (userData.streak as Streak[] | null)?.[0] ?? null,
+        badges: (userData.badges as Badge[]) ?? [],
+        mascot,
       } as UserProfile;
     },
   });
