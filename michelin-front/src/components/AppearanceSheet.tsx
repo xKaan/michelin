@@ -21,7 +21,7 @@ type Tab = "buddy" | "tenues";
 export function AppearanceSheet({ open, onClose }: AppearanceSheetProps) {
   const { user } = useAuth();
   const [tab, setTab] = useState<Tab>("buddy");
-  const { data: mascots = [], isLoading } = useAllUserMascots(user?.id ?? null);
+  const { data: mascots = [], isLoading } = useAllUserMascots(open ? (user?.id ?? null) : null);
   const setActive = useSetActiveMascot();
   const equipOutfit = useEquipOutfit();
   const unequipAll = useUnequipAllOutfits();
@@ -32,20 +32,13 @@ export function AppearanceSheet({ open, onClose }: AppearanceSheetProps) {
 
   return (
     <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
-        onClick={onClose}
-      />
+      <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={onClose} />
 
-      {/* Sheet */}
       <div className="fixed bottom-0 left-0 right-0 z-50 max-w-lg mx-auto rounded-t-[32px] bg-background shadow-2xl">
-        {/* Handle */}
         <div className="flex justify-center pt-3 pb-1">
           <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
         </div>
 
-        {/* Header */}
         <div className="flex items-center justify-between px-5 py-3">
           <h2 className="text-lg font-bold">Apparence</h2>
           <button
@@ -56,7 +49,6 @@ export function AppearanceSheet({ open, onClose }: AppearanceSheetProps) {
           </button>
         </div>
 
-        {/* Tabs */}
         <div className="flex mx-5 mb-4 rounded-xl bg-muted p-1 gap-1">
           {(["buddy", "tenues"] as Tab[]).map((t) => (
             <button
@@ -64,9 +56,7 @@ export function AppearanceSheet({ open, onClose }: AppearanceSheetProps) {
               onClick={() => setTab(t)}
               className={cn(
                 "flex-1 rounded-lg py-2 text-sm font-medium transition-colors",
-                tab === t
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground",
+                tab === t ? "bg-background text-foreground shadow-sm" : "text-muted-foreground",
               )}
             >
               {t === "buddy" ? "Familier" : "Tenues"}
@@ -74,7 +64,6 @@ export function AppearanceSheet({ open, onClose }: AppearanceSheetProps) {
           ))}
         </div>
 
-        {/* Content */}
         <div className="px-5 pb-8 min-h-[260px]">
           {isLoading ? (
             <div className="flex items-center justify-center h-40 text-sm text-muted-foreground animate-pulse">
@@ -110,6 +99,41 @@ export function AppearanceSheet({ open, onClose }: AppearanceSheetProps) {
   );
 }
 
+// --- Shared card ---
+
+function SelectionCard({
+  img,
+  label,
+  isSelected,
+  disabled,
+  onClick,
+}: {
+  img: string;
+  label: string;
+  isSelected: boolean;
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(
+        "relative flex flex-col items-center gap-1.5 rounded-2xl border-2 p-3 transition-colors disabled:opacity-60",
+        isSelected ? "border-primary bg-primary/5" : "border-border bg-card",
+      )}
+    >
+      <img src={img} alt={label} className="h-20 w-auto object-contain" />
+      <span className="text-xs font-medium text-center line-clamp-2">{label}</span>
+      {isSelected && (
+        <span className="absolute top-2 right-2 size-5 rounded-full bg-primary flex items-center justify-center">
+          <Check className="size-3 text-white stroke-[3]" />
+        </span>
+      )}
+    </button>
+  );
+}
+
 // --- Buddy tab ---
 
 function BuddyTab({
@@ -133,35 +157,16 @@ function BuddyTab({
 
   return (
     <div className="grid grid-cols-3 gap-3">
-      {mascots.map((m) => {
-        const isActive = m.id === activeMascotId;
-        const img = resolveMascotImage(m);
-        return (
-          <button
-            key={m.id}
-            disabled={isPending}
-            onClick={() => onSelect(m)}
-            className={cn(
-              "relative flex flex-col items-center gap-1.5 rounded-2xl border-2 p-3 transition-colors disabled:opacity-60",
-              isActive
-                ? "border-primary bg-primary/5"
-                : "border-border bg-card",
-            )}
-          >
-            <img
-              src={img}
-              alt={m.mascot.name}
-              className="h-20 w-auto object-contain"
-            />
-            <span className="text-xs font-medium">{m.nickname ?? m.mascot.name}</span>
-            {isActive && (
-              <span className="absolute top-2 right-2 size-5 rounded-full bg-primary flex items-center justify-center">
-                <Check className="size-3 text-white stroke-[3]" />
-              </span>
-            )}
-          </button>
-        );
-      })}
+      {mascots.map((m) => (
+        <SelectionCard
+          key={m.id}
+          img={resolveMascotImage(m)}
+          label={m.nickname ?? m.mascot.name}
+          isSelected={m.id === activeMascotId}
+          disabled={isPending}
+          onClick={() => onSelect(m)}
+        />
+      ))}
     </div>
   );
 }
@@ -187,59 +192,28 @@ function TenuesTab({
     );
   }
 
-  const outfits = activeMascot.outfits;
   const equippedId = activeMascot.equipped_outfit?.id ?? null;
   const baseImg = `/Buddy/${activeMascot.mascot.name}.png`;
 
   return (
     <div className="grid grid-cols-3 gap-3">
-      {/* Option "Par défaut" — retire la tenue */}
-      <button
+      <SelectionCard
+        img={baseImg}
+        label="Par défaut"
+        isSelected={equippedId === null}
         disabled={isPending || equippedId === null}
         onClick={() => onUnequip(activeMascot.id)}
-        className={cn(
-          "relative flex flex-col items-center gap-1.5 rounded-2xl border-2 p-3 transition-colors disabled:opacity-60",
-          equippedId === null
-            ? "border-primary bg-primary/5"
-            : "border-border bg-card",
-        )}
-      >
-        <img src={baseImg} alt="Par défaut" className="h-20 w-auto object-contain" />
-        <span className="text-xs font-medium">Par défaut</span>
-        {equippedId === null && (
-          <span className="absolute top-2 right-2 size-5 rounded-full bg-primary flex items-center justify-center">
-            <Check className="size-3 text-white stroke-[3]" />
-          </span>
-        )}
-      </button>
-
-      {outfits.map((uo) => {
-        const isEquipped = uo.id === equippedId;
-        const preview = uo.outfit.preview_url ?? baseImg;
-        return (
-          <button
-            key={uo.id}
-            disabled={isPending}
-            onClick={() => onEquip(uo.id, activeMascot.id)}
-            className={cn(
-              "relative flex flex-col items-center gap-1.5 rounded-2xl border-2 p-3 transition-colors disabled:opacity-60",
-              isEquipped
-                ? "border-primary bg-primary/5"
-                : "border-border bg-card",
-            )}
-          >
-            <img src={preview} alt={uo.outfit.name} className="h-20 w-auto object-contain" />
-            <span className="text-xs font-medium text-center line-clamp-2">
-              {uo.outfit.name}
-            </span>
-            {isEquipped && (
-              <span className="absolute top-2 right-2 size-5 rounded-full bg-primary flex items-center justify-center">
-                <Check className="size-3 text-white stroke-[3]" />
-              </span>
-            )}
-          </button>
-        );
-      })}
+      />
+      {activeMascot.outfits.map((uo) => (
+        <SelectionCard
+          key={uo.id}
+          img={uo.outfit.preview_url ?? baseImg}
+          label={uo.outfit.name}
+          isSelected={uo.id === equippedId}
+          disabled={isPending}
+          onClick={() => onEquip(uo.id, activeMascot.id)}
+        />
+      ))}
     </div>
   );
 }

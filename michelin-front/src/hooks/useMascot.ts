@@ -1,6 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import type { UserMascotWithOutfit, UserOutfit, Outfit, Mascot } from "@/types/database";
+
+function invalidateMascotQueries(qc: QueryClient, userId: string, userMascotId?: string) {
+  if (userMascotId) qc.invalidateQueries({ queryKey: ["user-outfits", userMascotId] });
+  qc.invalidateQueries({ queryKey: ["user-mascot", userId] });
+  qc.invalidateQueries({ queryKey: ["user-mascots-all", userId] });
+}
 
 export function useUserMascot(userId: string | null) {
   return useQuery<UserMascotWithOutfit | null>({
@@ -26,11 +33,7 @@ export function useUserMascot(userId: string | null) {
       const equipped = ((data.user_outfits ?? []) as (UserOutfit & { outfit: Outfit })[])
         .find((o) => o.is_equipped) ?? null;
 
-      return {
-        ...data,
-        user_outfits: undefined,
-        equipped_outfit: equipped,
-      } as UserMascotWithOutfit;
+      return { ...data, user_outfits: undefined, equipped_outfit: equipped } as UserMascotWithOutfit;
     },
   });
 }
@@ -54,23 +57,21 @@ export function useAllUserMascots(userId: string | null) {
             outfit:outfits(*)
           )
         `)
-        .eq("user_id", userId!)
-        .order("unlocked_at", { ascending: true });
+        .eq("user_id", userId!);
       if (error) throw error;
 
       return (data ?? [])
         .sort((a, b) => a.id.localeCompare(b.id))
         .map((row) => {
-        const outfits = ((row.user_outfits ?? []) as (UserOutfit & { outfit: Outfit })[])
-          .sort((a, b) => a.id.localeCompare(b.id));
-        const equipped = outfits.find((o) => o.is_equipped) ?? null;
-        return {
-          ...row,
-          user_outfits: undefined,
-          equipped_outfit: equipped,
-          outfits,
-        } as UserMascotFull;
-      });
+          const outfits = ((row.user_outfits ?? []) as (UserOutfit & { outfit: Outfit })[])
+            .sort((a, b) => a.id.localeCompare(b.id));
+          return {
+            ...row,
+            user_outfits: undefined,
+            equipped_outfit: outfits.find((o) => o.is_equipped) ?? null,
+            outfits,
+          } as UserMascotFull;
+        });
     },
   });
 }
@@ -79,11 +80,7 @@ export function useSetActiveMascot() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ userId, userMascotId }: { userId: string; userMascotId: string }) => {
-      await supabase
-        .from("user_mascots")
-        .update({ is_active: false })
-        .eq("user_id", userId);
-
+      await supabase.from("user_mascots").update({ is_active: false }).eq("user_id", userId);
       const { data, error } = await supabase
         .from("user_mascots")
         .update({ is_active: true })
@@ -93,24 +90,16 @@ export function useSetActiveMascot() {
       if (error) throw error;
       return data;
     },
-    onSuccess: (_data, { userId }) => {
-      qc.invalidateQueries({ queryKey: ["user-mascot", userId] });
-      qc.invalidateQueries({ queryKey: ["user-mascots-all", userId] });
-    },
+    onSuccess: (_data, { userId }) => invalidateMascotQueries(qc, userId),
   });
-}
-
-/** Résout l'URL à afficher : tenue équipée si dispo, sinon buddy nu */
-export function resolveBuddyImage(mascot: UserMascotWithOutfit | null | undefined): string | undefined {
-  if (!mascot) return undefined;
-  if (mascot.equipped_outfit?.outfit?.preview_url) {
-    return mascot.equipped_outfit.outfit.preview_url;
-  }
-  return `/Buddy/${mascot.mascot.name}.png`;
 }
 
 export function resolveMascotImage(row: { mascot: Mascot; equipped_outfit: (UserOutfit & { outfit: Outfit }) | null }): string {
   return row.equipped_outfit?.outfit?.preview_url ?? `/Buddy/${row.mascot.name}.png`;
+}
+
+export function resolveBuddyImage(mascot: UserMascotWithOutfit | null | undefined): string | undefined {
+  return mascot ? resolveMascotImage(mascot) : undefined;
 }
 
 export function useUserOutfits(userMascotId: string | null) {
@@ -140,31 +129,15 @@ export function useUnequipAllOutfits() {
       if (error) throw error;
       return { userMascotId, userId };
     },
-    onSuccess: ({ userMascotId, userId }) => {
-      qc.invalidateQueries({ queryKey: ["user-outfits", userMascotId] });
-      qc.invalidateQueries({ queryKey: ["user-mascot", userId] });
-      qc.invalidateQueries({ queryKey: ["user-mascots-all", userId] });
-    },
+    onSuccess: ({ userMascotId, userId }) => invalidateMascotQueries(qc, userId, userMascotId),
   });
 }
 
 export function useEquipOutfit() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({
-      userOutfitId,
-      userMascotId,
-      userId,
-    }: {
-      userOutfitId: string;
-      userMascotId: string;
-      userId: string;
-    }) => {
-      await supabase
-        .from("user_outfits")
-        .update({ is_equipped: false })
-        .eq("user_mascot_id", userMascotId);
-
+    mutationFn: async ({ userOutfitId, userMascotId, userId }: { userOutfitId: string; userMascotId: string; userId: string }) => {
+      await supabase.from("user_outfits").update({ is_equipped: false }).eq("user_mascot_id", userMascotId);
       const { data, error } = await supabase
         .from("user_outfits")
         .update({ is_equipped: true })
@@ -174,10 +147,6 @@ export function useEquipOutfit() {
       if (error) throw error;
       return { ...data, userId };
     },
-    onSuccess: (data) => {
-      qc.invalidateQueries({ queryKey: ["user-outfits", data.user_mascot_id] });
-      qc.invalidateQueries({ queryKey: ["user-mascot", data.userId] });
-      qc.invalidateQueries({ queryKey: ["user-mascots-all", data.userId] });
-    },
+    onSuccess: (data) => invalidateMascotQueries(qc, data.userId, data.user_mascot_id),
   });
 }
