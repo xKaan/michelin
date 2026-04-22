@@ -12,7 +12,7 @@ export function useUserMascot(userId: string | null) {
         .select(`
           *,
           mascot:mascots(*),
-          user_outfits!inner(
+          user_outfits(
             *,
             outfit:outfits(*)
           )
@@ -23,7 +23,7 @@ export function useUserMascot(userId: string | null) {
       if (error) throw error;
       if (!data) return null;
 
-      const equipped = (data.user_outfits as (UserOutfit & { outfit: Outfit })[])
+      const equipped = ((data.user_outfits ?? []) as (UserOutfit & { outfit: Outfit })[])
         .find((o) => o.is_equipped) ?? null;
 
       return {
@@ -33,6 +33,15 @@ export function useUserMascot(userId: string | null) {
       } as UserMascotWithOutfit;
     },
   });
+}
+
+/** Résout l'URL à afficher : tenue équipée si dispo, sinon buddy nu */
+export function resolveBuddyImage(mascot: UserMascotWithOutfit | null | undefined): string | undefined {
+  if (!mascot) return undefined;
+  if (mascot.equipped_outfit?.outfit?.preview_url) {
+    return mascot.equipped_outfit.outfit.preview_url;
+  }
+  return `/Buddy/${mascot.mascot.name}.png`;
 }
 
 export function useUserOutfits(userMascotId: string | null) {
@@ -61,7 +70,6 @@ export function useEquipOutfit() {
       userOutfitId: string;
       userMascotId: string;
     }) => {
-      // Déséquiper toutes les tenues du familier puis équiper la nouvelle
       await supabase
         .from("user_outfits")
         .update({ is_equipped: false })

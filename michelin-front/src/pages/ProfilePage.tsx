@@ -1,10 +1,31 @@
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useProfile";
+import { useUserMascot, resolveBuddyImage } from "@/hooks/useMascot";
 import { ChevronLeft, MoreHorizontal, ChevronRight, BadgeCheck } from "lucide-react";
 import { useMemo } from "react";
 import { useNavigate } from "react-router";
 import { QrCodeDisplay } from "@/components/QrCodeDisplay";
+import type { Badge as DBBadge } from "@/types/database";
+
+// badge_type → image locale
+const BADGE_IMAGES: Record<string, string> = {
+  first_visit:  "/Badges/badge_1.png",
+  three_stars:  "/Badges/badge_2.png",
+  truffle:      "/Badges/badge_3.png",
+  streak_7:     "/Badges/badge_4.png",
+  gourmet_tier: "/Badges/badge_5.png",
+  expert_tier:  "/Badges/badge_6.png",
+};
+
+const BADGE_LABELS: Record<string, string> = {
+  first_visit:  "Première visite",
+  three_stars:  "3 étoiles !",
+  truffle:      "Truffé",
+  streak_7:     "Streak ×7",
+  gourmet_tier: "Gourmet",
+  expert_tier:  "Expert",
+};
 
 // --- Types ---
 interface Badge {
@@ -12,6 +33,15 @@ interface Badge {
   label: string;
   date: string;
   image?: string;
+}
+
+function dbBadgeToDisplay(b: DBBadge): Badge {
+  return {
+    id: b.id,
+    label: BADGE_LABELS[b.badge_type] ?? b.badge_type,
+    date: new Date(b.earned_at).toLocaleDateString("fr-FR"),
+    image: BADGE_IMAGES[b.badge_type],
+  };
 }
 
 interface NotebookEntry {
@@ -35,14 +65,6 @@ function getTierLabel(tier: string): string {
 function xpToLevel(xp: number): number {
   return Math.floor(xp / 400) + 1;
 }
-
-// --- Mock data ---
-const MOCK_BADGES: Badge[] = [
-  { id: "1", label: "Première visite", date: "01/09/2025", image: "/Badges/badge_1.png" },
-  { id: "2", label: "3 étoiles !", date: "10/02/2026", image: "/Badges/badge_2.png" },
-  { id: "3", label: "Truffé", date: "21/03/2026", image: "/Badges/badge_3.png" },
-  { id: "4", label: "Str…", date: "30/0…", image: "/Badges/badge_4.png" },
-];
 
 const MOCK_NOTEBOOK: NotebookEntry[] = [
   { id: "1", image: "/Restaurants/resto_1.webp" },
@@ -191,6 +213,7 @@ export function ProfilePage() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { data: profile, isLoading, error } = useUserProfile(user?.id ?? null);
+  const { data: mascot } = useUserMascot(user?.id ?? null);
 
   const displayName =
     profile?.display_name ?? user?.user_metadata?.display_name ?? "Sans nom";
@@ -198,7 +221,11 @@ export function ProfilePage() {
   const xpTotal = profile?.xp_total ?? 0;
   const level = useMemo(() => xpToLevel(xpTotal), [xpTotal]);
 
-  const buddyImg: string | undefined = "/Buddy_skins/Mitch_jap.png";
+  const buddyImg = resolveBuddyImage(mascot);
+  const badges = useMemo(
+    () => (profile?.badges ?? []).map(dbBadgeToDisplay),
+    [profile?.badges],
+  );
 
   if (isLoading) return <LoadingState />;
   if (error) return <ErrorState message={error.message} />;
@@ -227,11 +254,15 @@ export function ProfilePage() {
         {/* Badges section */}
         <section className="mb-8">
           <SectionHeader label={t("profile.badges", "Badges")} href="#" />
-          <div className="flex gap-4 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-none">
-            {MOCK_BADGES.map((badge) => (
-              <BadgeCard key={badge.id} badge={badge} />
-            ))}
-          </div>
+          {badges.length > 0 ? (
+            <div className="flex gap-4 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-none">
+              {badges.map((badge) => (
+                <BadgeCard key={badge.id} badge={badge} />
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Aucun badge pour l'instant.</p>
+          )}
         </section>
 
         {/* Notebook section */}
