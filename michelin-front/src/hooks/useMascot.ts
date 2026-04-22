@@ -111,30 +111,19 @@ export function useSetActiveMascot() {
   });
 }
 
-export function resolveMascotImage(row: { mascot: Mascot; equipped_outfit: (UserOutfit & { outfit: Outfit }) | null }): string {
-  return row.equipped_outfit?.outfit?.preview_url ?? `/Buddy/${row.mascot.name}.png`;
+export function resolveMascotImage(row: { mascot: Mascot & { image_url?: string | null }; equipped_outfit: (UserOutfit & { outfit: Outfit }) | null }): string {
+  return row.equipped_outfit?.outfit?.preview_url
+    ?? row.mascot.image_url
+    ?? `/Buddy/${row.mascot.name}.png`;
 }
 
 export function resolveBuddyImage(mascot: UserMascotWithOutfit | null | undefined): string | undefined {
   return mascot ? resolveMascotImage(mascot) : undefined;
 }
 
-export function resolveBuddyHead(mascot: UserMascotWithOutfit | null | undefined): string | undefined {
+export function resolveBuddyHead(mascot: (UserMascotWithOutfit & { mascot: Mascot & { head_url?: string | null } }) | null | undefined): string | undefined {
   if (!mascot) return undefined;
-  
-  // Try outfit-specific head first if one is equipped
-  // We use the preview_url filename to match the head filename
-  if (mascot.equipped_outfit?.outfit?.preview_url) {
-    const previewUrl = mascot.equipped_outfit.outfit.preview_url;
-    // Extract filename without extension (e.g., "/Buddy_skins/Hoshi_fr.png" -> "Hoshi_fr")
-    const filename = previewUrl.split('/').pop()?.split('.')[0];
-    if (filename) {
-      return `/Buddy/Heads/${filename}_head.png`;
-    }
-  }
-  
-  // Fallback to base mascot head
-  return `/Buddy/Heads/${mascot.mascot.name}_head.png`;
+  return mascot.mascot.head_url ?? `/Buddy/Heads/${mascot.mascot.name}_head.png`;
 }
 
 export function useUserOutfits(userMascotId: string | null) {

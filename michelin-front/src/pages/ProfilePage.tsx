@@ -8,15 +8,15 @@ import { useNavigate } from "react-router";
 import { QrCodeDisplay } from "@/components/QrCodeDisplay";
 import { AppearanceSheet } from "@/components/AppearanceSheet";
 import type { Badge as DBBadge } from "@/types/database";
+import { storageUrl } from "@/lib/supabase";
 
-// badge_type → image locale
 const BADGE_IMAGES: Record<string, string> = {
-  first_visit:  "/Badges/badge_1.png",
-  three_stars:  "/Badges/badge_2.png",
-  truffle:      "/Badges/badge_3.png",
-  streak_7:     "/Badges/badge_4.png",
-  gourmet_tier: "/Badges/badge_5.png",
-  expert_tier:  "/Badges/badge_6.png",
+  first_visit:  storageUrl('assets', 'badges/badge_1.png'),
+  three_stars:  storageUrl('assets', 'badges/badge_2.png'),
+  truffle:      storageUrl('assets', 'badges/badge_3.png'),
+  streak_7:     storageUrl('assets', 'badges/badge_4.png'),
+  gourmet_tier: storageUrl('assets', 'badges/badge_5.png'),
+  expert_tier:  storageUrl('assets', 'badges/badge_6.png'),
 };
 
 const BADGE_LABELS: Record<string, string> = {

@@ -15,3 +15,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
   },
 });
+
+export function storageUrl(bucket: string, path: string): string {
+  return `${supabaseUrl}/storage/v1/object/public/${bucket}/${path}`
+}
