@@ -1,4 +1,5 @@
 export type Tier = "explorer" | "member" | "gourmet" | "expert";
+export type CriticType = "restaurant" | "hotel";
 export type MichelinStatus = "none" | "bib" | "one" | "two" | "three";
 export type EstablishmentType = "restaurant" | "hotel";
 export type ReviewStatus = "pending" | "published" | "flagged";
@@ -29,6 +30,7 @@ export interface User {
   xp_total: number;
   last_location: string | null;
   created_at: string;
+  critic_type: CriticType | null;
 }
 
 export interface UserVerification {
@@ -204,7 +206,22 @@ export interface Notification {
 
 export interface ReviewWithMedia extends Review {
   media: Media[];
-  user: Pick<User, "id" | "display_name" | "tier">;
+  user: Pick<User, "id" | "display_name" | "tier" | "critic_type">;
+}
+
+export interface CriticReview {
+  id: string;
+  user_id: string;
+  establishment_id: string;
+  rating: number;
+  content: string | null;
+  status: ReviewStatus;
+  likes_count: number;
+  published_at: string | null;
+  created_at: string;
+  critic_name: string;
+  critic_tier: Tier;
+  critic_type: CriticType;
 }
 
 export interface UserMascotWithOutfit extends UserMascot {
@@ -251,4 +268,15 @@ export interface UserReward {
 export interface EstablishmentView extends Omit<Establishment, 'coordinates'> {
   lat: number
   lng: number
+}
+
+export type UnlockableType = 'mascot' | 'outfit'
+
+export interface Unlockable {
+  establishment_id: string
+  unlockable_type: UnlockableType
+  unlockable_id: string
+  unlockable_name: string
+  preview_url: string | null
+  description: string | null
 }

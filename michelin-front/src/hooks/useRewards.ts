@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import type { Unlockable } from "@/types/database";
 
 export interface Reward {
   id: string;
@@ -31,6 +32,21 @@ export interface UserReward {
   min_tier?: string;
   establishment_name?: string;
   establishment_city?: string | null;
+}
+
+export function useEstablishmentUnlockables(establishmentId: string | null) {
+  return useQuery<Unlockable[]>({
+    queryKey: ["unlockables", establishmentId],
+    enabled: !!establishmentId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("establishment_unlockables")
+        .select("*")
+        .eq("establishment_id", establishmentId!);
+      if (error) throw error;
+      return (data ?? []) as Unlockable[];
+    },
+  });
 }
 
 export function useUserRewards(userId: string | null) {

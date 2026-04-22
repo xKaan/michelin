@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
-import type { Review, ReviewWithMedia } from "@/types/database";
+import type { CriticReview, CriticType, Review, ReviewWithMedia } from "@/types/database";
 
 export function useReviews(establishmentId: string | null) {
   return useQuery<ReviewWithMedia[]>({
@@ -19,6 +19,26 @@ export function useReviews(establishmentId: string | null) {
         .order("published_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as ReviewWithMedia[];
+    },
+  });
+}
+
+export function useCriticReviews(
+  establishmentId: string | null,
+  criticType: CriticType,
+) {
+  return useQuery<CriticReview[]>({
+    queryKey: ["critic-reviews", establishmentId, criticType],
+    enabled: !!establishmentId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("critic_reviews")
+        .select("*")
+        .eq("establishment_id", establishmentId!)
+        .eq("critic_type", criticType)
+        .order("likes_count", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as CriticReview[];
     },
   });
 }
