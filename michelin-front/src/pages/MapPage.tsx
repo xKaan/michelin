@@ -13,7 +13,7 @@ const STORAGE_KEY = 'map_position'
 const LYON: [number, number] = [4.8357, 45.764]
 const DEFAULT = { center: LYON, zoom: 13 }
 const SOURCE_ID = 'establishments'
-const CLICKABLE_LAYERS = ['michelin-three', 'michelin-two', 'michelin-one', 'michelin-bib', 'michelin-none']
+const CLICKABLE_LAYERS = ['michelin-three', 'michelin-two', 'michelin-one', 'michelin-bib', 'michelin-hotel', 'michelin-none']
 
 const HIDE_SOURCE_LAYERS = [
   'poi_sport', 'poi_shopping', 'poi_transport', 'poi_healthcare',
@@ -145,6 +145,9 @@ async function prepareMarkerImages(map: maptilersdk.Map): Promise<void> {
   if (!map.hasImage('michelin-bib')) {
     map.addImage('michelin-bib', drawTextMarker(26, 'Bib', 10), { pixelRatio: dpr })
   }
+  if (!map.hasImage('michelin-hotel')) {
+    map.addImage('michelin-hotel', drawTextMarker(24, 'H', 13), { pixelRatio: dpr })
+  }
   if (!map.hasImage('michelin-none')) {
     map.addImage('michelin-none', drawTextMarker(18, '·', 11), { pixelRatio: dpr })
   }
@@ -159,7 +162,7 @@ function toGeoJSON(data: EstablishmentView[]): GeoJSON.FeatureCollection {
         type: 'Feature' as const,
         id: String(e.id),
         geometry: { type: 'Point' as const, coordinates: [e.lng!, e.lat!] },
-        properties: { id: e.id, status: e.michelin_status ?? '' },
+        properties: { id: e.id, status: e.michelin_status ?? '', type: e.establishment_type },
       })),
   }
 }
@@ -190,22 +193,37 @@ function setupEstablishmentLayers(
     }
   }
 
-  for (const status of ['bib', 'none'] as const) {
-    if (!map.getLayer(`michelin-${status}`)) {
-      map.addLayer({
-        id: `michelin-${status}`,
-        type: 'symbol',
-        source: SOURCE_ID,
-        filter: status === 'none'
-          ? ['!', ['in', ['get', 'status'], ['literal', ['one', 'two', 'three', 'bib']]]]
-          : ['==', ['get', 'status'], status],
-        layout: {
-          'icon-image': `michelin-${status}`,
-          'icon-allow-overlap': true,
-          'icon-anchor': 'center',
-        },
-      })
-    }
+  if (!map.getLayer('michelin-bib')) {
+    map.addLayer({
+      id: 'michelin-bib',
+      type: 'symbol',
+      source: SOURCE_ID,
+      filter: ['==', ['get', 'status'], 'bib'],
+      layout: { 'icon-image': 'michelin-bib', 'icon-allow-overlap': true, 'icon-anchor': 'center' },
+    })
+  }
+
+  if (!map.getLayer('michelin-hotel')) {
+    map.addLayer({
+      id: 'michelin-hotel',
+      type: 'symbol',
+      source: SOURCE_ID,
+      filter: ['==', ['get', 'type'], 'hotel'],
+      layout: { 'icon-image': 'michelin-hotel', 'icon-allow-overlap': true, 'icon-anchor': 'center' },
+    })
+  }
+
+  if (!map.getLayer('michelin-none')) {
+    map.addLayer({
+      id: 'michelin-none',
+      type: 'symbol',
+      source: SOURCE_ID,
+      filter: ['all',
+        ['!=', ['get', 'type'], 'hotel'],
+        ['!', ['in', ['get', 'status'], ['literal', ['one', 'two', 'three', 'bib']]]],
+      ],
+      layout: { 'icon-image': 'michelin-none', 'icon-allow-overlap': true, 'icon-anchor': 'center' },
+    })
   }
 
   for (const layerId of CLICKABLE_LAYERS) {

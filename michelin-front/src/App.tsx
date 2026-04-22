@@ -7,6 +7,7 @@ import { MapPage } from '@/pages/MapPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { ProfilePage } from '@/pages/ProfilePage'
 import { SocialPage } from '@/pages/SocialPage'
+import { ExplorePage } from '@/pages/ExplorePage'
 import { LoginPage } from '@/pages/LoginPage'
 import { RegisterPage } from '@/pages/RegisterPage'
 import { useAuth } from '@/hooks/useAuth'
@@ -62,7 +63,14 @@ function App() {
             <Route path="/social" element={user ? <SocialPage /> : <Navigate to="/login" replace />} />
             <Route path="/settings" element={user ? <SettingsPage /> : <Navigate to="/login" replace />} />
             <Route path="/profile" element={user ? <ProfilePage /> : <Navigate to="/login" replace />} />
-            <Route path="/explore" element={<Navigate to="/map" replace />} />
+            <Route
+              path="/explore"
+              element={
+                user
+                  ? <ExplorePage onEstablishmentClick={handleEstablishmentClick} />
+                  : <Navigate to="/login" replace />
+              }
+            />
             <Route path="/saved" element={<Navigate to="/social" replace />} />
             <Route path="*" element={<Navigate to={user ? '/map' : '/login'} replace />} />
           </Routes>
