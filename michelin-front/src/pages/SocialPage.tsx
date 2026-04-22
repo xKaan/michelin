@@ -1,6 +1,7 @@
 import { Camera, Heart, MessageCircle, MoreHorizontal, Plus, UserPlus, X, Search, Star } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
+import { useSheetDrag } from '@/hooks/useSheetDrag'
 import { useUsers } from '@/hooks/useUsers'
 import { useAllEstablishments } from '@/hooks/useRestaurants'
 import {
@@ -36,6 +37,7 @@ function timeAgo(dateStr: string): string {
 function CreatePostModal({ onClose }: { onClose: () => void }) {
   const { data: establishments = [] } = useAllEstablishments()
   const createPost = useCreatePost()
+  const { handleProps, sheetStyle } = useSheetDrag(onClose)
 
   const [search, setSearch] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -87,11 +89,15 @@ function CreatePostModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-end" onClick={onClose}>
       <div
-        className="w-full max-h-[92vh] overflow-y-auto rounded-t-3xl bg-background border-t border-border p-5 flex flex-col gap-5"
+        className="w-full max-h-[92vh] overflow-y-auto rounded-t-3xl bg-background border-t border-border flex flex-col"
+        style={sheetStyle}
         onClick={e => e.stopPropagation()}
       >
         {/* Handle */}
-        <div className="mx-auto w-10 h-1 rounded-full bg-border -mt-1" />
+        <div {...handleProps}>
+          <div className="w-10 h-1 rounded-full bg-border" />
+        </div>
+        <div className="px-5 pb-5 flex flex-col gap-5">
 
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold">Nouveau post</h2>
@@ -240,6 +246,7 @@ function CreatePostModal({ onClose }: { onClose: () => void }) {
             {createPost.isPending ? 'Publication...' : 'Publier'}
           </button>
         </form>
+        </div>
       </div>
     </div>
   )
@@ -256,6 +263,7 @@ function FindFriendsModal({ onClose, currentUserId }: {
   const follow = useFollow()
   const unfollow = useUnfollow()
   const [query, setQuery] = useState('')
+  const { handleProps, sheetStyle } = useSheetDrag(onClose)
 
   const followingIds = useMemo(() => new Set(following.map(f => f.id)), [following])
 
@@ -271,10 +279,13 @@ function FindFriendsModal({ onClose, currentUserId }: {
     <div className="fixed inset-0 z-50 bg-black/40 flex items-end" onClick={onClose}>
       <div
         className="w-full max-h-[80vh] flex flex-col rounded-t-3xl bg-background border-t border-border"
+        style={sheetStyle}
         onClick={e => e.stopPropagation()}
       >
-        <div className="p-5 flex flex-col gap-4 flex-shrink-0">
-          <div className="mx-auto w-10 h-1 rounded-full bg-border -mt-1" />
+        <div {...handleProps}>
+          <div className="w-10 h-1 rounded-full bg-border" />
+        </div>
+        <div className="px-5 pb-4 flex flex-col gap-4 flex-shrink-0">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold">Trouver des amis</h2>
             <button onClick={onClose} className="rounded-full p-2 bg-muted">
@@ -346,6 +357,7 @@ function CommentsSheet({ reviewId, currentUserId, onClose }: {
   const { data: comments = [], isLoading } = useComments(reviewId, true)
   const addComment = useAddComment()
   const [text, setText] = useState('')
+  const { handleProps, sheetStyle } = useSheetDrag(onClose)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -359,11 +371,14 @@ function CommentsSheet({ reviewId, currentUserId, onClose }: {
     <div className="fixed inset-0 z-50 bg-black/40 flex items-end" onClick={onClose}>
       <div
         className="w-full max-h-[75vh] flex flex-col rounded-t-3xl bg-background border-t border-border"
+        style={sheetStyle}
         onClick={e => e.stopPropagation()}
       >
         {/* Handle + title */}
-        <div className="flex-shrink-0 px-5 pt-4 pb-3">
-          <div className="mx-auto w-10 h-1 rounded-full bg-border mb-4" />
+        <div {...handleProps}>
+          <div className="w-10 h-1 rounded-full bg-border" />
+        </div>
+        <div className="flex-shrink-0 px-5 pb-3">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-bold">Commentaires</h2>
             <button onClick={onClose} className="rounded-full p-2 bg-muted">
