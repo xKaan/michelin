@@ -10,7 +10,7 @@ export function Header({ minimal = false }: { minimal?: boolean }) {
   const { t } = useTranslation()
   const { theme, toggle } = useTheme()
   const { pathname } = useLocation()
-  const hideSearch = pathname === '/social'
+  const hideSearch = pathname !== '/map'
 
   useEffect(() => {
     if (open) inputRef.current?.focus()
