@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useAuth, useSignOut } from '@/hooks/useAuth'
+import { useUserProfile } from '@/hooks/useProfile'
 import { useUserMascot } from '@/hooks/useMascot'
 
 const items = [
@@ -25,6 +26,8 @@ export function BottomNav() {
   const { user } = useAuth()
   const { data: mascot } = useUserMascot(user?.id ?? null)
   const signOut = useSignOut()
+  const { data: profile } = useUserProfile(user?.id ?? null)
+  const avatarColor = profile?.avatar_color ?? '#cb0028'
 
   const avatarUrl = mascot?.head_url ?? `https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(user?.email ?? 'michelin')}`
 
@@ -57,7 +60,8 @@ export function BottomNav() {
       {/* Profile avatar — séparé */}
       <DropdownMenu>
         <DropdownMenuTrigger
-          className="size-14 rounded-full overflow-hidden ring-2 ring-primary shadow-xl flex-shrink-0 bg-primary focus:outline-none"
+          className="size-14 rounded-full overflow-hidden shadow-xl flex-shrink-0 focus:outline-none"
+          style={{ backgroundColor: avatarColor }}
           aria-label={t('header.profile')}
         >
           <img

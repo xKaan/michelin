@@ -11,7 +11,7 @@ export interface SocialPost {
   likes_count: number;
   published_at: string | null;
   created_at: string;
-  user: Pick<User, "id" | "display_name">;
+  user: Pick<User, "id" | "display_name" | "avatar_color">;
   establishment: { name: string; city: string | null };
   media: { id: string; url: string; type: string }[];
 }
@@ -35,7 +35,7 @@ export function useSocialFeed() {
         .from("reviews")
         .select(`
           id, user_id, establishment_id, content, rating, likes_count, published_at, created_at,
-          user:users!reviews_user_id_fkey(id, display_name),
+          user:users!reviews_user_id_fkey(id, display_name, avatar_color),
           establishment:establishments!reviews_restaurant_id_fkey(name, city),
           media(id, url, type)
         `)
@@ -117,7 +117,7 @@ export function useFollowing(userId: string | null) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("follows")
-        .select("followed:users!follows_followed_id_fkey(id, display_name, email, tier, xp_total, phone, created_at)")
+        .select("followed:users!follows_followed_id_fkey(id, display_name, email, tier, xp_total, phone, avatar_color, created_at)")
         .eq("follower_id", userId!);
 
       if (error) throw error;
@@ -275,7 +275,7 @@ export interface Comment {
   user_id: string;
   content: string;
   created_at: string;
-  user: Pick<User, "id" | "display_name">;
+  user: Pick<User, "id" | "display_name" | "avatar_color">;
 }
 
 export function useComments(reviewId: string, enabled: boolean) {

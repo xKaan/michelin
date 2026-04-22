@@ -4,7 +4,7 @@ import { useUserProfile } from "@/hooks/useProfile";
 import { useUserMascot, resolveBuddyImage } from "@/hooks/useMascot";
 import { ChevronLeft, MoreHorizontal, ChevronRight, BadgeCheck, Palette } from "lucide-react";
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import { QrCodeDisplay } from "@/components/QrCodeDisplay";
 import { AppearanceSheet } from "@/components/AppearanceSheet";
 import type { Badge as DBBadge } from "@/types/database";
@@ -116,13 +116,13 @@ function MoreButton({ onAppearance }: { onAppearance: () => void }) {
   );
 }
 
-function HeroBanner({ buddyImg, onAppearance }: { buddyImg?: string; onAppearance: () => void }) {
+function HeroBanner({ buddyImg, onAppearance, isOwnProfile }: { buddyImg?: string; onAppearance: () => void; isOwnProfile: boolean }) {
   const navigate = useNavigate();
   return (
     <div className="relative w-full h-[320px] bg-[#dde0ef] overflow-hidden flex items-end justify-center">
       <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10">
         <BackButton onClick={() => navigate(-1)} />
-        <MoreButton onAppearance={onAppearance} />
+        {isOwnProfile && <MoreButton onAppearance={onAppearance} />}
       </div>
 
       {buddyImg ? (
@@ -231,11 +231,15 @@ function ErrorState({ message }: { message: string }) {
 export function ProfilePage() {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const { data: profile, isLoading, error } = useUserProfile(user?.id ?? null);
-  const { data: mascot } = useUserMascot(user?.id ?? null);
+  const { userId: paramUserId } = useParams<{ userId: string }>();
+  const viewedUserId = paramUserId ?? user?.id ?? null;
+  const isOwnProfile = !paramUserId || paramUserId === user?.id;
+
+  const { data: profile, isLoading, error } = useUserProfile(viewedUserId);
+  const { data: mascot } = useUserMascot(viewedUserId);
 
   const displayName =
-    profile?.display_name ?? user?.user_metadata?.display_name ?? "Sans nom";
+    profile?.display_name ?? (isOwnProfile ? user?.user_metadata?.display_name : null) ?? "Sans nom";
   const tier = profile?.tier ?? "novice";
   const xpTotal = profile?.xp_total ?? 0;
   const level = useMemo(() => xpToLevel(xpTotal), [xpTotal]);
@@ -253,8 +257,8 @@ export function ProfilePage() {
   return (
     <div className="max-w-lg mx-auto bg-background min-h-screen overflow-x-hidden">
       {/* Hero with buddy character */}
-      <HeroBanner buddyImg={buddyImg} onAppearance={() => setAppearanceOpen(true)} />
-      <AppearanceSheet open={appearanceOpen} onClose={() => setAppearanceOpen(false)} />
+      <HeroBanner buddyImg={buddyImg} onAppearance={() => setAppearanceOpen(true)} isOwnProfile={isOwnProfile} />
+      {isOwnProfile && <AppearanceSheet open={appearanceOpen} onClose={() => setAppearanceOpen(false)} />}
 
       {/* White card sheet — overlaps the hero slightly */}
       <div className="relative -mt-6 rounded-t-[40px] bg-background px-5 pt-6 pb-12 z-10 shadow-[0_-4px_24px_rgba(0,0,0,0.08)]">
@@ -274,7 +278,7 @@ export function ProfilePage() {
 
         {/* Badges section */}
         <section className="mb-8">
-          <SectionHeader label={t("profile.badges", "Badges")} href="#" />
+          <SectionHeader label={isOwnProfile ? t("profile.badges", "Mes badges") : "Badges"} href="#" />
           {badges.length > 0 ? (
             <div className="flex gap-4 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-none">
               {badges.map((badge) => (
@@ -287,8 +291,8 @@ export function ProfilePage() {
         </section>
 
         {/* Notebook section */}
-        <section className="mb-8">
-          <SectionHeader label={t("profile.notebook", "Mon carnet")} href="#" />
+        <section className={isOwnProfile ? "mb-8" : "mb-0"}>
+          <SectionHeader label={isOwnProfile ? t("profile.notebook", "Mon carnet") : "Carnet"} href="#" />
           <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-none">
             {MOCK_NOTEBOOK.map((entry) => (
               <NotebookCard key={entry.id} entry={entry} />
@@ -296,13 +300,15 @@ export function ProfilePage() {
           </div>
         </section>
 
-        {/* QR Code */}
-        <section>
-          <SectionHeader label={t("profile.qrcode", "Mon QR code")} />
-          <div className="rounded-xl border border-border bg-card px-5 py-6 flex flex-col items-center">
-            <QrCodeDisplay tier={tier} />
-          </div>
-        </section>
+        {/* QR Code — own profile only */}
+        {isOwnProfile && (
+          <section>
+            <SectionHeader label={t("profile.qrcode", "Mon QR code")} />
+            <div className="rounded-xl border border-border bg-card px-5 py-6 flex flex-col items-center">
+              <QrCodeDisplay tier={tier} />
+            </div>
+          </section>
+        )}
       </div>
     </div>
   );
