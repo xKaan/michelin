@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  Bookmark, BookmarkCheck, ChevronLeft, ChevronRight, ChevronUp, ChevronDown,
+  Bookmark, BookmarkCheck, ChevronLeft, ChevronRight,
   Globe, MapPin, MessageCircle, Phone, Award, Star, BadgeCheck,
   UtensilsCrossed, BedDouble, X,
 } from 'lucide-react'
@@ -172,7 +172,7 @@ export function EstablishmentCard({ establishment: e, onClose }: Props) {
     else if (dy > 80) snap === 0 ? onClose() : setSnap(s => Math.max(0, s - 1) as Snap)
   }
 
-  function advanceSnap() { setSnap(s => Math.min(2, s + 1) as Snap) }
+  function advanceSnap() { setSnap(s => s === 0 ? 2 : Math.min(2, s + 1) as Snap) }
 
   const meta        = e ? STATUS_META[e.michelin_status] : null
   const Icon        = e?.establishment_type === 'hotel' ? BedDouble : UtensilsCrossed
@@ -212,15 +212,13 @@ export function EstablishmentCard({ establishment: e, onClose }: Props) {
           onMouseUp={endDrag}
           onMouseLeave={endDrag}
         >
-          {/* Handle pill — tap to expand */}
+          {/* Handle pill — tap to expand, drag to snap */}
           <button
-            onPointerDown={ev => ev.stopPropagation()}
             onClick={advanceSnap}
             className="flex flex-col items-center w-full pt-3.5 pb-1 gap-1"
             aria-label="Développer"
           >
             <div className="w-9 h-[5px] rounded-full bg-foreground/18" />
-            {snap < 2 && <ChevronUp className="size-3.5 text-foreground/25" />}
           </button>
 
           {/* Sticky header */}
@@ -280,26 +278,6 @@ export function EstablishmentCard({ establishment: e, onClose }: Props) {
               ) : <div />}
 
               <div className="flex items-center gap-2 flex-shrink-0">
-                {snap < 2 && (
-                  <button
-                    onPointerDown={ev => ev.stopPropagation()}
-                    onClick={advanceSnap}
-                    className="size-9 rounded-full bg-muted flex items-center justify-center transition-transform active:scale-90"
-                    aria-label="Développer"
-                  >
-                    <ChevronUp className="size-4 text-foreground/60" />
-                  </button>
-                )}
-                {snap > 0 && (
-                  <button
-                    onPointerDown={ev => ev.stopPropagation()}
-                    onClick={() => setSnap(s => Math.max(0, s - 1) as Snap)}
-                    className="size-9 rounded-full bg-muted flex items-center justify-center transition-transform active:scale-90"
-                    aria-label="Réduire"
-                  >
-                    <ChevronDown className="size-4 text-foreground/60" />
-                  </button>
-                )}
                 <button
                   onPointerDown={ev => ev.stopPropagation()}
                   className="bg-foreground text-background rounded-full px-5 py-[9px] text-[13px] font-bold tracking-wide transition-transform active:scale-95"
