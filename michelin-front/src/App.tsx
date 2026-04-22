@@ -59,7 +59,7 @@ function App() {
                   : <Navigate to="/login" replace />
               }
             />
-            <Route path="/social" element={user ? <UsersPage /> : <Navigate to="/login" replace />} />
+            <Route path="/social" element={user ? <SocialPage /> : <Navigate to="/login" replace />} />
             <Route path="/settings" element={user ? <SettingsPage /> : <Navigate to="/login" replace />} />
             <Route path="/profile" element={user ? <ProfilePage /> : <Navigate to="/login" replace />} />
             <Route path="/explore" element={<Navigate to="/map" replace />} />
