@@ -16,6 +16,7 @@ function App() {
   const location = useLocation()
   const { user, loading } = useAuth()
   const isAuthPage = ['/login', '/register'].includes(location.pathname)
+  const isProfilePage = location.pathname === '/profile'
   const [selectedEstablishment, setSelectedEstablishment] = useState<EstablishmentView | null>(null)
 
   function handleEstablishmentClick(e: EstablishmentView) {
@@ -32,37 +33,41 @@ function App() {
 
   return (
     <>
-      <Header minimal={isAuthPage} />
-      {!isAuthPage && <BottomNav />}
-      {!isAuthPage && (
-        <>
-          <EstablishmentCard
-            establishment={selectedEstablishment}
-            onClose={() => setSelectedEstablishment(null)}
-          />
-        </>
-      )}
-      <main className={isAuthPage ? 'pt-24' : ''}>
+    {!isProfilePage && <Header minimal={isAuthPage} />}
+    {!isAuthPage && !isProfilePage && <BottomNav />}
+    {!isAuthPage && !isProfilePage && (
+      <EstablishmentCard
+        establishment={selectedEstablishment}
+        onClose={() => setSelectedEstablishment(null)}
+      />
+    )}
+      {isProfilePage ? (
         <Routes>
-          <Route path="/" element={<Navigate to={user ? '/map' : '/login'} replace />} />
-          <Route path="/login" element={user ? <Navigate to="/map" replace /> : <LoginPage />} />
-          <Route path="/register" element={user ? <Navigate to="/map" replace /> : <RegisterPage />} />
-          <Route
-            path="/map"
-            element={
-              user
-                ? <MapPage onEstablishmentClick={handleEstablishmentClick} />
-                : <Navigate to="/login" replace />
-            }
-          />
-          <Route path="/social" element={user ? <SocialPage /> : <Navigate to="/login" replace />} />
-          <Route path="/settings" element={user ? <SettingsPage /> : <Navigate to="/login" replace />} />
           <Route path="/profile" element={user ? <ProfilePage /> : <Navigate to="/login" replace />} />
-          <Route path="/explore" element={<Navigate to="/map" replace />} />
-          <Route path="/saved" element={<Navigate to="/social" replace />} />
-          <Route path="*" element={<Navigate to={user ? '/map' : '/login'} replace />} />
         </Routes>
-      </main>
+      ) : (
+        <main className={isAuthPage ? 'pt-24' : ''}>
+          <Routes>
+            <Route path="/" element={<Navigate to={user ? '/map' : '/login'} replace />} />
+            <Route path="/login" element={user ? <Navigate to="/map" replace /> : <LoginPage />} />
+            <Route path="/register" element={user ? <Navigate to="/map" replace /> : <RegisterPage />} />
+            <Route
+              path="/map"
+              element={
+                user
+                  ? <MapPage onEstablishmentClick={handleEstablishmentClick} />
+                  : <Navigate to="/login" replace />
+              }
+            />
+            <Route path="/social" element={user ? <UsersPage /> : <Navigate to="/login" replace />} />
+            <Route path="/settings" element={user ? <SettingsPage /> : <Navigate to="/login" replace />} />
+            <Route path="/profile" element={user ? <ProfilePage /> : <Navigate to="/login" replace />} />
+            <Route path="/explore" element={<Navigate to="/map" replace />} />
+            <Route path="/saved" element={<Navigate to="/social" replace />} />
+            <Route path="*" element={<Navigate to={user ? '/map' : '/login'} replace />} />
+          </Routes>
+        </main>
+      )}
     </>
   )
 }
