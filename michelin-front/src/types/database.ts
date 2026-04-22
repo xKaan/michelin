@@ -51,6 +51,8 @@ export interface Establishment {
   michelin_status: MichelinStatus;
   cuisines: string[] | null;
   opening_hours: Record<string, string> | null;
+  phone: string | null;
+  image_url: string | null;
   created_at: string;
   updated_at: string;
 }
