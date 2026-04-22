@@ -34,7 +34,7 @@ function App() {
 
   return (
     <>
-    {!isProfilePage && <Header minimal={isAuthPage} />}
+    {!isProfilePage && <Header minimal={isAuthPage} onSelectEstablishment={handleEstablishmentClick} />}
     {!isAuthPage && !isProfilePage && <BottomNav />}
     {!isAuthPage && !isProfilePage && (
       <EstablishmentCard
@@ -57,7 +57,7 @@ function App() {
               path="/map"
               element={
                 user
-                  ? <MapPage onEstablishmentClick={handleEstablishmentClick} />
+                  ? <MapPage onEstablishmentClick={handleEstablishmentClick} flyTarget={selectedEstablishment} />
                   : <Navigate to="/login" replace />
               }
             />

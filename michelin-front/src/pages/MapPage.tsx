@@ -308,9 +308,10 @@ async function applyStyleSetup(
 
 interface Props {
   onEstablishmentClick: (e: EstablishmentView) => void
+  flyTarget?: EstablishmentView | null
 }
 
-export function MapPage({ onEstablishmentClick }: Props) {
+export function MapPage({ onEstablishmentClick, flyTarget }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maptilersdk.Map | null>(null)
   const mapLoadedRef = useRef(false)
@@ -323,6 +324,11 @@ export function MapPage({ onEstablishmentClick }: Props) {
   themeRef.current = theme
 
   const { data: establishments } = useAllEstablishments()
+
+  useEffect(() => {
+    if (!flyTarget?.lat || !flyTarget?.lng || !mapRef.current || !mapLoadedRef.current) return
+    mapRef.current.flyTo({ center: [flyTarget.lng, flyTarget.lat], zoom: 16, duration: 600 })
+  }, [flyTarget])
 
   useEffect(() => {
     onEstablishmentClickRef.current = onEstablishmentClick
