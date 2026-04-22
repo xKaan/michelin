@@ -2,7 +2,8 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useProfile";
 import { useUserMascot, resolveBuddyImage } from "@/hooks/useMascot";
-import { ChevronLeft, MoreHorizontal, ChevronRight, BadgeCheck, Palette } from "lucide-react";
+import { useFollowing, useFollow, useUnfollow } from "@/hooks/useSocial";
+import { ChevronLeft, MoreHorizontal, ChevronRight, BadgeCheck, Palette, UserMinus, UserPlus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { QrCodeDisplay } from "@/components/QrCodeDisplay";
@@ -123,7 +124,35 @@ function lightenHex(hex: string, amount: number): string {
   return `rgb(${Math.round(r + (255 - r) * amount)},${Math.round(g + (255 - g) * amount)},${Math.round(b + (255 - b) * amount)})`
 }
 
-function HeroBanner({ buddyImg, onAppearance, isOwnProfile, avatarColor }: { buddyImg?: string; onAppearance: () => void; isOwnProfile: boolean; avatarColor: string }) {
+function FollowButton({ onClick, loading }: { onClick: () => void; loading: boolean }) {
+  return (
+    <button
+      aria-label="Suivre"
+      disabled={loading}
+      className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-[#cb0028] shadow-sm text-white text-xs font-medium disabled:opacity-60"
+      onClick={onClick}
+    >
+      <UserPlus className="size-4" />
+      Suivre
+    </button>
+  );
+}
+
+function UnfollowButton({ onClick, loading }: { onClick: () => void; loading: boolean }) {
+  return (
+    <button
+      aria-label="Ne plus suivre"
+      disabled={loading}
+      className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-white/80 backdrop-blur-sm shadow-sm text-foreground text-xs font-medium disabled:opacity-60"
+      onClick={onClick}
+    >
+      <UserMinus className="size-4" />
+      Ne plus suivre
+    </button>
+  );
+}
+
+function HeroBanner({ buddyImg, onAppearance, isOwnProfile, avatarColor, isFollowing, onFollow, onUnfollow, followLoading, unfollowLoading }: { buddyImg?: string; onAppearance: () => void; isOwnProfile: boolean; avatarColor: string; isFollowing?: boolean; onFollow?: () => void; onUnfollow?: () => void; followLoading?: boolean; unfollowLoading?: boolean }) {
   const navigate = useNavigate();
   const haloColor = lightenHex(avatarColor, 0.55);
   return (
@@ -131,6 +160,12 @@ function HeroBanner({ buddyImg, onAppearance, isOwnProfile, avatarColor }: { bud
       <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-20">
         <BackButton onClick={() => navigate(-1)} />
         {isOwnProfile && <MoreButton onAppearance={onAppearance} />}
+        {!isOwnProfile && isFollowing && onUnfollow && (
+          <UnfollowButton onClick={onUnfollow} loading={unfollowLoading ?? false} />
+        )}
+        {!isOwnProfile && !isFollowing && onFollow && (
+          <FollowButton onClick={onFollow} loading={followLoading ?? false} />
+        )}
       </div>
 
       <div
@@ -263,13 +298,31 @@ export function ProfilePage() {
   );
   const [appearanceOpen, setAppearanceOpen] = useState(false);
 
+  const { data: following } = useFollowing(!isOwnProfile ? user?.id ?? null : null);
+  const isFollowing = useMemo(
+    () => !isOwnProfile && (following ?? []).some((u) => u.id === viewedUserId),
+    [isOwnProfile, following, viewedUserId],
+  );
+  const follow = useFollow();
+  const unfollow = useUnfollow();
+
   if (isLoading) return <LoadingState />;
   if (error) return <ErrorState message={error.message} />;
 
   return (
     <div className="max-w-lg mx-auto bg-background min-h-screen overflow-x-hidden">
       {/* Hero with buddy character */}
-      <HeroBanner buddyImg={buddyImg} onAppearance={() => setAppearanceOpen(true)} isOwnProfile={isOwnProfile} avatarColor={profile?.avatar_color ?? '#dde0ef'} />
+      <HeroBanner
+        buddyImg={buddyImg}
+        onAppearance={() => setAppearanceOpen(true)}
+        isOwnProfile={isOwnProfile}
+        avatarColor={profile?.avatar_color ?? '#dde0ef'}
+        isFollowing={isFollowing}
+        onFollow={() => viewedUserId && follow.mutate(viewedUserId)}
+        onUnfollow={() => viewedUserId && unfollow.mutate(viewedUserId)}
+        followLoading={follow.isPending}
+        unfollowLoading={unfollow.isPending}
+      />
       {isOwnProfile && <AppearanceSheet open={appearanceOpen} onClose={() => setAppearanceOpen(false)} />}
 
       {/* White card sheet — overlaps the hero slightly */}
