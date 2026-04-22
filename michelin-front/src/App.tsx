@@ -6,7 +6,7 @@ import { EstablishmentCard } from '@/components/EstablishmentCard'
 import { MapPage } from '@/pages/MapPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { ProfilePage } from '@/pages/ProfilePage'
-import { UsersPage } from '@/pages/UsersPage'
+import { SocialPage } from '@/pages/SocialPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { RegisterPage } from '@/pages/RegisterPage'
 import { useAuth } from '@/hooks/useAuth'
@@ -55,7 +55,7 @@ function App() {
                 : <Navigate to="/login" replace />
             }
           />
-          <Route path="/social" element={user ? <UsersPage /> : <Navigate to="/login" replace />} />
+          <Route path="/social" element={user ? <SocialPage /> : <Navigate to="/login" replace />} />
           <Route path="/settings" element={user ? <SettingsPage /> : <Navigate to="/login" replace />} />
           <Route path="/profile" element={user ? <ProfilePage /> : <Navigate to="/login" replace />} />
           <Route path="/explore" element={<Navigate to="/map" replace />} />
