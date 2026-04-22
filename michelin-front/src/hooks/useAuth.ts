@@ -55,16 +55,6 @@ export function useSignUp() {
         options: { data: { display_name } },
       });
       if (error) throw error;
-
-      // Créer le profil user dans la table users
-      if (data.user) {
-        await supabase.from("users").insert({
-          id: data.user.id,
-          email,
-          display_name,
-        });
-      }
-
       return data;
     },
   });

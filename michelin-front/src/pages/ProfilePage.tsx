@@ -1,6 +1,8 @@
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/hooks/useAuth'
 import { useUserProfile } from '@/hooks/useProfile'
+import { QrCodeDisplay } from '@/components/QrCodeDisplay'
+import { XpProgress } from '@/components/XpProgress'
 
 export function ProfilePage() {
   const { t } = useTranslation()
@@ -53,14 +55,14 @@ export function ProfilePage() {
           <span className="text-sm text-muted-foreground">{t('profile.email')}</span>
           <span className="text-sm font-medium">{email}</span>
         </div>
-        <div className="flex items-center justify-between rounded-xl border border-border bg-card px-5 py-4">
-          <span className="text-sm text-muted-foreground">Tier</span>
-          <span className="text-sm font-medium capitalize">{tier}</span>
-        </div>
-        <div className="flex items-center justify-between rounded-xl border border-border bg-card px-5 py-4">
-          <span className="text-sm text-muted-foreground">XP</span>
-          <span className="text-sm font-medium">{xpTotal}</span>
-        </div>
+      </div>
+
+      <div className="rounded-xl border border-border bg-card px-5 py-5 mt-4">
+        <XpProgress xp={xpTotal} streak={profile?.streak?.current_count} showActions />
+      </div>
+
+      <div className="rounded-xl border border-border bg-card px-5 py-6 mt-4 flex flex-col items-center">
+        <QrCodeDisplay tier={tier} />
       </div>
     </div>
   )
