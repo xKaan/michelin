@@ -27,7 +27,7 @@ export function BottomNav() {
   const { data: mascot } = useUserMascot(user?.id ?? null)
   const signOut = useSignOut()
   const { data: profile } = useUserProfile(user?.id ?? null)
-  const avatarColor = profile?.avatar_color ?? '#cb0028'
+  const avatarColor = profile?.avatar_color ?? '#dde0ef'
 
   const avatarUrl = mascot?.head_url ?? `https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(user?.email ?? 'michelin')}`
 

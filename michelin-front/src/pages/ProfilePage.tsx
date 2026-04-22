@@ -116,20 +116,32 @@ function MoreButton({ onAppearance }: { onAppearance: () => void }) {
   );
 }
 
-function HeroBanner({ buddyImg, onAppearance, isOwnProfile }: { buddyImg?: string; onAppearance: () => void; isOwnProfile: boolean }) {
+function lightenHex(hex: string, amount: number): string {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  return `rgb(${Math.round(r + (255 - r) * amount)},${Math.round(g + (255 - g) * amount)},${Math.round(b + (255 - b) * amount)})`
+}
+
+function HeroBanner({ buddyImg, onAppearance, isOwnProfile, avatarColor }: { buddyImg?: string; onAppearance: () => void; isOwnProfile: boolean; avatarColor: string }) {
   const navigate = useNavigate();
+  const haloColor = lightenHex(avatarColor, 0.55);
   return (
-    <div className="relative w-full h-[320px] bg-[#dde0ef] overflow-hidden flex items-end justify-center">
-      <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10">
+    <div className="relative w-full h-[320px] overflow-hidden flex items-end justify-center" style={{ backgroundColor: avatarColor }}>
+      <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-20">
         <BackButton onClick={() => navigate(-1)} />
         {isOwnProfile && <MoreButton onAppearance={onAppearance} />}
       </div>
 
+      <div
+        className="absolute bottom-0 left-1/2 -translate-x-1/2 w-64 h-64 rounded-full blur-3xl pointer-events-none"
+        style={{ backgroundColor: haloColor, opacity: 0.6 }}
+      />
       {buddyImg ? (
         <img
           src={buddyImg}
           alt="Buddy"
-          className="h-[280px] w-auto object-contain select-none"
+          className="h-[280px] w-auto object-contain select-none relative z-10"
           draggable={false}
         />
       ) : (
@@ -257,7 +269,7 @@ export function ProfilePage() {
   return (
     <div className="max-w-lg mx-auto bg-background min-h-screen overflow-x-hidden">
       {/* Hero with buddy character */}
-      <HeroBanner buddyImg={buddyImg} onAppearance={() => setAppearanceOpen(true)} isOwnProfile={isOwnProfile} />
+      <HeroBanner buddyImg={buddyImg} onAppearance={() => setAppearanceOpen(true)} isOwnProfile={isOwnProfile} avatarColor={profile?.avatar_color ?? '#dde0ef'} />
       {isOwnProfile && <AppearanceSheet open={appearanceOpen} onClose={() => setAppearanceOpen(false)} />}
 
       {/* White card sheet — overlaps the hero slightly */}

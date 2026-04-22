@@ -19,6 +19,7 @@ export interface SocialPost {
 export function useSocialFeed() {
   return useQuery<SocialPost[]>({
     queryKey: ["social-feed"],
+    refetchOnMount: "always",
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];

@@ -45,7 +45,7 @@ export function AppearanceSheet({ open, onClose }: AppearanceSheetProps) {
   const updateProfile = useUpdateProfile();
 
   const activeMascot = mascots.find((m) => m.is_active) ?? null;
-  const currentColor = profile?.avatar_color ?? "#cb0028";
+  const currentColor = profile?.avatar_color ?? "#dde0ef";
 
   if (!open) return null;
 
@@ -116,6 +116,7 @@ export function AppearanceSheet({ open, onClose }: AppearanceSheetProps) {
           ) : (
             <ColorTab
               currentColor={currentColor}
+              avatarUrl={activeMascot?.head_url ?? `https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(user?.email ?? 'me')}&size=80`}
               isPending={updateProfile.isPending}
               onSelect={(color) => updateProfile.mutate({ avatar_color: color })}
             />
@@ -130,27 +131,24 @@ export function AppearanceSheet({ open, onClose }: AppearanceSheetProps) {
 
 function ColorTab({
   currentColor,
+  avatarUrl,
   isPending,
   onSelect,
 }: {
   currentColor: string;
+  avatarUrl: string;
   isPending: boolean;
   onSelect: (color: string) => void;
 }) {
-  const seed = "preview";
   return (
     <div className="flex flex-col gap-5">
       {/* Preview */}
       <div className="flex justify-center">
         <div
-          className="size-20 rounded-full overflow-hidden ring-2 ring-offset-2 ring-offset-background transition-all"
-          style={{ backgroundColor: currentColor, outlineColor: currentColor }}
+          className="size-20 rounded-full overflow-hidden transition-all"
+          style={{ backgroundColor: currentColor }}
         >
-          <img
-            src={`https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(seed)}&size=80`}
-            alt="preview"
-            className="size-full"
-          />
+          <img src={avatarUrl} alt="preview" className="size-full object-cover" />
         </div>
       </div>
 

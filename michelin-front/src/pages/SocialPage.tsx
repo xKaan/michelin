@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router'
 import { useAuth } from '@/hooks/useAuth'
 import { useUsers } from '@/hooks/useUsers'
 import { useAllEstablishments } from '@/hooks/useRestaurants'
+import { useBatchAvatarUrls } from '@/hooks/useMascot'
 import {
   useSocialFeed,
   useMyLikes,
@@ -440,11 +441,13 @@ function PostCard({
   isLiked,
   onToggleLike,
   currentUserId,
+  avatarUrl,
 }: {
   post: SocialPost
   isLiked: boolean
   onToggleLike: () => void
   currentUserId: string
+  avatarUrl: string
 }) {
   const photo = post.media.find(m => m.type === 'photo')
   const deletePost = useDeletePost()
@@ -466,10 +469,10 @@ function PostCard({
           <button
             onClick={goToProfile}
             className="size-10 rounded-full overflow-hidden flex-shrink-0 active:opacity-70 transition-opacity"
-            style={{ backgroundColor: post.user.avatar_color ?? '#cb0028' }}
+            style={{ backgroundColor: post.user.avatar_color ?? '#dde0ef' }}
           >
             <img
-              src={avatar(post.user_id)}
+              src={avatarUrl}
               alt={post.user.display_name}
               className="size-full object-cover"
             />
@@ -625,6 +628,19 @@ export function SocialPage() {
   const [showFindFriends, setShowFindFriends] = useState(false)
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
 
+  const allUserIds = useMemo(() => {
+    const ids = new Set(following.map(f => f.id))
+    feed.forEach(p => ids.add(p.user_id))
+    if (user?.id) ids.add(user.id)
+    return [...ids]
+  }, [following, feed, user?.id])
+
+  const { data: avatarUrls = new Map<string, string>() } = useBatchAvatarUrls(allUserIds)
+
+  function resolveAvatar(userId: string) {
+    return avatarUrls.get(userId) ?? avatar(userId)
+  }
+
   const filteredFeed = useMemo(
     () => selectedUserId ? feed.filter(p => p.user_id === selectedUserId) : feed,
     [feed, selectedUserId]
@@ -673,7 +689,7 @@ export function SocialPage() {
           {/* Following */}
           {following.map(f => {
             const isSelected = selectedUserId === f.id
-            const color = f.avatar_color ?? '#cb0028'
+            const color = f.avatar_color ?? '#dde0ef'
             return (
               <button
                 key={f.id}
@@ -692,7 +708,7 @@ export function SocialPage() {
                   }}
                 >
                   <img
-                    src={avatar(f.id)}
+                    src={resolveAvatar(f.id)}
                     alt={f.display_name}
                     className="size-full object-cover"
                   />
@@ -785,6 +801,7 @@ export function SocialPage() {
               toggleLike.mutate({ reviewId: post.id, isLiked: myLikes.has(post.id) })
             }
             currentUserId={user?.id ?? ''}
+            avatarUrl={resolveAvatar(post.user_id)}
           />
         ))}
       </div>
