@@ -12,6 +12,8 @@ maptilersdk.config.apiKey = import.meta.env.VITE_MAPTILER_KEY
 const STORAGE_KEY = 'map_position'
 const LYON: [number, number] = [4.8357, 45.764]
 const DEFAULT = { center: LYON, zoom: 13 }
+const SOURCE_ID = 'establishments'
+const CLICKABLE_LAYERS = ['michelin-three', 'michelin-two', 'michelin-one', 'michelin-bib', 'michelin-none']
 
 const HIDE_SOURCE_LAYERS = [
   'poi_sport', 'poi_shopping', 'poi_transport', 'poi_healthcare',
@@ -19,6 +21,12 @@ const HIDE_SOURCE_LAYERS = [
   'poi_food', 'poi_accommodation',
   'street_furniture', 'tree',
 ]
+
+const MARKER_SPECS = {
+  three: { size: 48, border: 2.5, borderColor: '#f59e0b',              stars: 3, starSize: 13 },
+  two:   { size: 40, border: 2.5, borderColor: 'rgba(255,255,255,0.4)', stars: 2, starSize: 16 },
+  one:   { size: 32, border: 2,   borderColor: 'rgba(255,255,255,0.4)', stars: 1, starSize: 20 },
+} as const
 
 function mapStyle(dark: boolean) {
   return dark ? 'streets-v4-dark' : maptilersdk.MapStyle.STREETS
@@ -32,46 +40,191 @@ function loadSavedPosition() {
   return DEFAULT
 }
 
-function markerContent(status: string): string {
-  const rosette = (size: number) =>
-    `<img src="/etoile_michelin.png" width="${size}" height="${size}" style="object-fit:contain;display:block;" alt="" />`
-  switch (status) {
-    case 'three': return `<div style="display:flex;gap:1px;align-items:center;">${rosette(13)}${rosette(13)}${rosette(13)}</div>`
-    case 'two':   return `<div style="display:flex;gap:1px;align-items:center;">${rosette(16)}${rosette(16)}</div>`
-    case 'one':   return rosette(20)
-    case 'bib':   return 'Bib'
-    default:      return '·'
+function makeWhiteStarCanvas(src: HTMLImageElement, size: number): HTMLCanvasElement {
+  const c = document.createElement('canvas')
+  c.width = size
+  c.height = size
+  const ctx = c.getContext('2d')!
+  ctx.drawImage(src, 0, 0, size, size)
+  ctx.globalCompositeOperation = 'source-in'
+  ctx.fillStyle = '#ffffff'
+  ctx.fillRect(0, 0, size, size)
+  return c
+}
+
+function drawCircleMarker(
+  starSrc: HTMLImageElement,
+  size: number,
+  border: number,
+  borderColor: string,
+  stars: number,
+  starSize: number,
+): ImageData {
+  const dpr = window.devicePixelRatio || 1
+  const px = size * dpr
+  const canvas = document.createElement('canvas')
+  canvas.width = px
+  canvas.height = px
+  const ctx = canvas.getContext('2d')!
+  ctx.scale(dpr, dpr)
+
+  const cx = size / 2
+  const cy = size / 2
+
+  ctx.beginPath()
+  ctx.arc(cx, cy, size / 2, 0, Math.PI * 2)
+  ctx.fillStyle = '#cb0028'
+  ctx.fill()
+
+  ctx.beginPath()
+  ctx.arc(cx, cy, size / 2 - border / 2, 0, Math.PI * 2)
+  ctx.strokeStyle = borderColor
+  ctx.lineWidth = border
+  ctx.stroke()
+
+  const gap = 1
+  const totalW = stars * starSize + (stars - 1) * gap
+  const startX = cx - totalW / 2
+  const whiteStar = makeWhiteStarCanvas(starSrc, starSize)
+  for (let i = 0; i < stars; i++) {
+    ctx.drawImage(whiteStar, startX + i * (starSize + gap), cy - starSize / 2, starSize, starSize)
+  }
+
+  return ctx.getImageData(0, 0, px, px)
+}
+
+function drawTextMarker(size: number, text: string, fontSize: number): ImageData {
+  const dpr = window.devicePixelRatio || 1
+  const px = size * dpr
+  const canvas = document.createElement('canvas')
+  canvas.width = px
+  canvas.height = px
+  const ctx = canvas.getContext('2d')!
+  ctx.scale(dpr, dpr)
+
+  const cx = size / 2
+  const cy = size / 2
+
+  ctx.beginPath()
+  ctx.arc(cx, cy, size / 2, 0, Math.PI * 2)
+  ctx.fillStyle = '#cb0028'
+  ctx.fill()
+
+  ctx.beginPath()
+  ctx.arc(cx, cy, size / 2 - 1, 0, Math.PI * 2)
+  ctx.strokeStyle = 'rgba(255,255,255,0.4)'
+  ctx.lineWidth = 2
+  ctx.stroke()
+
+  ctx.fillStyle = '#ffffff'
+  ctx.font = `800 ${fontSize}px sans-serif`
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText(text, cx, cy)
+
+  return ctx.getImageData(0, 0, px, px)
+}
+
+async function prepareMarkerImages(map: maptilersdk.Map): Promise<void> {
+  const starSrc = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => resolve(img)
+    img.onerror = reject
+    img.src = '/etoile_michelin.png'
+  })
+
+  const dpr = window.devicePixelRatio || 1
+
+  for (const [status, spec] of Object.entries(MARKER_SPECS) as [keyof typeof MARKER_SPECS, typeof MARKER_SPECS[keyof typeof MARKER_SPECS]][]) {
+    if (!map.hasImage(`michelin-${status}`)) {
+      const imageData = drawCircleMarker(starSrc, spec.size, spec.border, spec.borderColor, spec.stars, spec.starSize)
+      map.addImage(`michelin-${status}`, imageData, { pixelRatio: dpr })
+    }
+  }
+
+  if (!map.hasImage('michelin-bib')) {
+    map.addImage('michelin-bib', drawTextMarker(26, 'Bib', 10), { pixelRatio: dpr })
+  }
+  if (!map.hasImage('michelin-none')) {
+    map.addImage('michelin-none', drawTextMarker(18, '·', 11), { pixelRatio: dpr })
   }
 }
 
-function placeMarkers(
+function toGeoJSON(data: EstablishmentView[]): GeoJSON.FeatureCollection {
+  return {
+    type: 'FeatureCollection',
+    features: data
+      .filter(e => e.lat != null && e.lng != null)
+      .map(e => ({
+        type: 'Feature' as const,
+        id: String(e.id),
+        geometry: { type: 'Point' as const, coordinates: [e.lng!, e.lat!] },
+        properties: { id: e.id, status: e.michelin_status ?? '' },
+      })),
+  }
+}
+
+function setupEstablishmentLayers(
   map: maptilersdk.Map,
-  data: EstablishmentView[],
-  markersRef: React.MutableRefObject<maptilersdk.Marker[]>,
   onClickRef: React.MutableRefObject<(e: EstablishmentView) => void>,
+  establishmentsRef: React.MutableRefObject<EstablishmentView[]>,
 ) {
-  markersRef.current.forEach(m => m.remove())
-  markersRef.current = []
+  if (!map.getSource(SOURCE_ID)) {
+    map.addSource(SOURCE_ID, { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
+  }
 
-  data.forEach(e => {
-    if (e.lat == null || e.lng == null) return
+  const starStatuses = ['three', 'two', 'one'] as const
+  for (const status of starStatuses) {
+    if (!map.getLayer(`michelin-${status}`)) {
+      map.addLayer({
+        id: `michelin-${status}`,
+        type: 'symbol',
+        source: SOURCE_ID,
+        filter: ['==', ['get', 'status'], status],
+        layout: {
+          'icon-image': `michelin-${status}`,
+          'icon-allow-overlap': true,
+          'icon-anchor': 'center',
+        },
+      })
+    }
+  }
 
-    const el = document.createElement('div')
-    el.className = `michelin-marker michelin-marker-${e.michelin_status}`
-    el.innerHTML = markerContent(e.michelin_status)
+  for (const status of ['bib', 'none'] as const) {
+    if (!map.getLayer(`michelin-${status}`)) {
+      map.addLayer({
+        id: `michelin-${status}`,
+        type: 'symbol',
+        source: SOURCE_ID,
+        filter: status === 'none'
+          ? ['!', ['in', ['get', 'status'], ['literal', ['one', 'two', 'three', 'bib']]]]
+          : ['==', ['get', 'status'], status],
+        layout: {
+          'icon-image': `michelin-${status}`,
+          'icon-allow-overlap': true,
+          'icon-anchor': 'center',
+        },
+      })
+    }
+  }
 
-    el.addEventListener('click', (ev) => {
-      ev.stopPropagation()
-      map.flyTo({ center: [e.lng!, e.lat!], zoom: 16, duration: 600 })
-      onClickRef.current(e)
+  for (const layerId of CLICKABLE_LAYERS) {
+    map.on('click', layerId, (e) => {
+      const feature = e.features?.[0]
+      if (!feature?.properties) return
+      const est = establishmentsRef.current.find(r => r.id === feature.properties!.id)
+      if (!est) return
+      map.flyTo({ center: [est.lng!, est.lat!], zoom: 16, duration: 600 })
+      onClickRef.current(est)
     })
+    map.on('mouseenter', layerId, () => { map.getCanvas().style.cursor = 'pointer' })
+    map.on('mouseleave', layerId, () => { map.getCanvas().style.cursor = '' })
+  }
+}
 
-    const marker = new maptilersdk.Marker({ element: el })
-      .setLngLat([e.lng, e.lat])
-      .addTo(map)
-
-    markersRef.current.push(marker)
-  })
+function updateEstablishmentData(map: maptilersdk.Map, data: EstablishmentView[]) {
+  const source = map.getSource(SOURCE_ID) as maptilersdk.GeoJSONSource | undefined
+  source?.setData(toGeoJSON(data))
 }
 
 function addUserLocationLayers(map: maptilersdk.Map, pos: [number, number]) {
@@ -111,11 +264,10 @@ function addUserLocationLayers(map: maptilersdk.Map, pos: [number, number]) {
   }
 }
 
-function applyStyleSetup(
+async function applyStyleSetup(
   map: maptilersdk.Map,
-  establishments: EstablishmentView[],
-  markersRef: React.MutableRefObject<maptilersdk.Marker[]>,
   onClickRef: React.MutableRefObject<(e: EstablishmentView) => void>,
+  establishmentsRef: React.MutableRefObject<EstablishmentView[]>,
   userPos: [number, number] | null,
 ) {
   map.getStyle().layers.forEach((l) => {
@@ -124,8 +276,12 @@ function applyStyleSetup(
       map.setLayoutProperty(l.id, 'visibility', 'none')
     }
   })
-  if (establishments.length) {
-    placeMarkers(map, establishments, markersRef, onClickRef)
+
+  await prepareMarkerImages(map)
+  setupEstablishmentLayers(map, onClickRef, establishmentsRef)
+  // read ref AFTER await so data arrived while loading images is picked up
+  if (establishmentsRef.current.length) {
+    updateEstablishmentData(map, establishmentsRef.current)
   }
   if (userPos) {
     addUserLocationLayers(map, userPos)
@@ -139,7 +295,6 @@ interface Props {
 export function MapPage({ onEstablishmentClick }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maptilersdk.Map | null>(null)
-  const markersRef = useRef<maptilersdk.Marker[]>([])
   const mapLoadedRef = useRef(false)
   const establishmentsRef = useRef<EstablishmentView[]>([])
   const onEstablishmentClickRef = useRef(onEstablishmentClick)
@@ -155,22 +310,20 @@ export function MapPage({ onEstablishmentClick }: Props) {
     onEstablishmentClickRef.current = onEstablishmentClick
   }, [onEstablishmentClick])
 
-  // Update markers when establishments data arrives
   useEffect(() => {
     if (!establishments?.length) return
     establishmentsRef.current = establishments
     if (mapRef.current && mapLoadedRef.current) {
-      placeMarkers(mapRef.current, establishments, markersRef, onEstablishmentClickRef)
+      updateEstablishmentData(mapRef.current, establishments)
     }
   }, [establishments])
 
-  // Switch map style when theme changes
   useEffect(() => {
     const map = mapRef.current
     if (!map || !mapLoadedRef.current) return
 
     map.once('styledata', () => {
-      applyStyleSetup(map, establishmentsRef.current, markersRef, onEstablishmentClickRef, userPosRef.current)
+      applyStyleSetup(map, onEstablishmentClickRef, establishmentsRef, userPosRef.current)
     })
     map.setStyle(mapStyle(theme === 'dark'))
   }, [theme])
@@ -197,7 +350,7 @@ export function MapPage({ onEstablishmentClick }: Props) {
     map.on('load', () => {
       mapLoadedRef.current = true
 
-      applyStyleSetup(map, establishmentsRef.current, markersRef, onEstablishmentClickRef, null)
+      applyStyleSetup(map, onEstablishmentClickRef, establishmentsRef, null)
 
       navigator.geolocation.getCurrentPosition(({ coords }) => {
         const pos: [number, number] = [coords.longitude, coords.latitude]
@@ -209,8 +362,6 @@ export function MapPage({ onEstablishmentClick }: Props) {
     })
 
     return () => {
-      markersRef.current.forEach(m => m.remove())
-      markersRef.current = []
       mapLoadedRef.current = false
       mapRef.current?.remove()
       mapRef.current = null
