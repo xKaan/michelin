@@ -1,5 +1,5 @@
 import { QRCodeSVG } from "qrcode.react";
-import { RefreshCw, Shield } from "lucide-react";
+import { Shield } from "lucide-react";
 import { useAuth, useGenerateQrCode } from "@/hooks/useAuth";
 import { useActiveQrCode } from "@/hooks/useRewards";
 import { cn } from "@/lib/utils";
@@ -69,18 +69,10 @@ export function QrCodeDisplay({ tier = "explorer", className }: QrCodeDisplayPro
         )}
       </div>
 
-      {/* Footer : expiration + rafraîchir */}
+      {/* Footer : expiration */}
       {qrCode && (
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
           <span>Expire dans {expiresIn} min</span>
-          <button
-            onClick={() => generate.mutate()}
-            disabled={generate.isPending}
-            className="flex items-center gap-1 rounded-md px-2 py-1 hover:bg-muted disabled:opacity-50"
-          >
-            <RefreshCw className={cn("size-3", generate.isPending && "animate-spin")} />
-            Nouveau
-          </button>
         </div>
       )}
 
