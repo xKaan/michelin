@@ -2,10 +2,11 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useProfile";
 import { useUserMascot, resolveBuddyImage } from "@/hooks/useMascot";
-import { ChevronLeft, MoreHorizontal, ChevronRight, BadgeCheck } from "lucide-react";
-import { useMemo } from "react";
+import { ChevronLeft, MoreHorizontal, ChevronRight, BadgeCheck, Palette } from "lucide-react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { QrCodeDisplay } from "@/components/QrCodeDisplay";
+import { AppearanceSheet } from "@/components/AppearanceSheet";
 import type { Badge as DBBadge } from "@/types/database";
 
 // badge_type → image locale
@@ -86,24 +87,42 @@ function BackButton({ onClick }: { onClick?: () => void }) {
   );
 }
 
-function MoreButton() {
+function MoreButton({ onAppearance }: { onAppearance: () => void }) {
+  const [open, setOpen] = useState(false);
   return (
-    <button
-      aria-label="Plus d'options"
-      className="size-9 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-sm shadow-sm text-foreground"
-    >
-      <MoreHorizontal className="size-5" />
-    </button>
+    <div className="relative">
+      <button
+        aria-label="Plus d'options"
+        className="size-9 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-sm shadow-sm text-foreground"
+        onClick={() => setOpen((v) => !v)}
+      >
+        <MoreHorizontal className="size-5" />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-11 z-20 min-w-[160px] rounded-xl bg-background shadow-lg border border-border overflow-hidden">
+            <button
+              className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-medium hover:bg-muted transition-colors"
+              onClick={() => { setOpen(false); onAppearance(); }}
+            >
+              <Palette className="size-4 text-muted-foreground" />
+              Apparence
+            </button>
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 
-function HeroBanner({ buddyImg }: { buddyImg?: string }) {
+function HeroBanner({ buddyImg, onAppearance }: { buddyImg?: string; onAppearance: () => void }) {
   const navigate = useNavigate();
   return (
     <div className="relative w-full h-[320px] bg-[#dde0ef] overflow-hidden flex items-end justify-center">
       <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10">
         <BackButton onClick={() => navigate(-1)} />
-        <MoreButton />
+        <MoreButton onAppearance={onAppearance} />
       </div>
 
       {buddyImg ? (
@@ -226,6 +245,7 @@ export function ProfilePage() {
     () => (profile?.badges ?? []).map(dbBadgeToDisplay),
     [profile?.badges],
   );
+  const [appearanceOpen, setAppearanceOpen] = useState(false);
 
   if (isLoading) return <LoadingState />;
   if (error) return <ErrorState message={error.message} />;
@@ -233,7 +253,8 @@ export function ProfilePage() {
   return (
     <div className="max-w-lg mx-auto bg-background min-h-screen overflow-x-hidden">
       {/* Hero with buddy character */}
-      <HeroBanner buddyImg={buddyImg} />
+      <HeroBanner buddyImg={buddyImg} onAppearance={() => setAppearanceOpen(true)} />
+      <AppearanceSheet open={appearanceOpen} onClose={() => setAppearanceOpen(false)} />
 
       {/* White card sheet — overlaps the hero slightly */}
       <div className="relative -mt-6 rounded-t-[40px] bg-background px-5 pt-6 pb-12 z-10 shadow-[0_-4px_24px_rgba(0,0,0,0.08)]">
