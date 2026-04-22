@@ -17,7 +17,7 @@ function App() {
   const location = useLocation()
   const { user, loading } = useAuth()
   const isAuthPage = ['/login', '/register'].includes(location.pathname)
-  const isProfilePage = location.pathname === '/profile'
+  const isProfilePage = location.pathname.startsWith('/profile')
   const [selectedEstablishment, setSelectedEstablishment] = useState<EstablishmentView | null>(null)
 
   function handleEstablishmentClick(e: EstablishmentView) {
@@ -45,6 +45,7 @@ function App() {
       {isProfilePage ? (
         <Routes>
           <Route path="/profile" element={user ? <ProfilePage /> : <Navigate to="/login" replace />} />
+          <Route path="/profile/:userId" element={user ? <ProfilePage /> : <Navigate to="/login" replace />} />
         </Routes>
       ) : (
         <main className={isAuthPage ? 'pt-24' : ''}>
@@ -63,6 +64,7 @@ function App() {
             <Route path="/social" element={user ? <SocialPage /> : <Navigate to="/login" replace />} />
             <Route path="/settings" element={user ? <SettingsPage /> : <Navigate to="/login" replace />} />
             <Route path="/profile" element={user ? <ProfilePage /> : <Navigate to="/login" replace />} />
+            <Route path="/profile/:userId" element={user ? <ProfilePage /> : <Navigate to="/login" replace />} />
             <Route
               path="/explore"
               element={

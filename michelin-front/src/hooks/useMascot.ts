@@ -124,6 +124,28 @@ export function resolveBuddyHead(mascot: (UserMascotWithOutfit & { mascot: Masco
   return mascot.mascot.head_url ?? undefined;
 }
 
+export function useBatchAvatarUrls(userIds: string[]) {
+  const sorted = [...userIds].sort();
+  return useQuery<Map<string, string>>({
+    queryKey: ["avatar-urls", ...sorted],
+    enabled: sorted.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("user_mascots")
+        .select("user_id, mascot:mascots(name, head_url)")
+        .in("user_id", sorted)
+        .eq("is_active", true);
+
+      const map = new Map<string, string>();
+      for (const row of data ?? []) {
+        const m = row.mascot as unknown as { name: string; head_url: string | null } | null;
+        if (m) map.set(row.user_id, m.head_url ?? `/Buddy/Heads/${m.name}_head.png`);
+      }
+      return map;
+    },
+  });
+}
+
 export function useUserOutfits(userMascotId: string | null) {
   return useQuery({
     queryKey: ["user-outfits", userMascotId],

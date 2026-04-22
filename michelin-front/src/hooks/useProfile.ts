@@ -72,6 +72,7 @@ export function useUpdateProfile() {
     mutationFn: async (updates: {
       display_name?: string;
       phone?: string;
+      avatar_color?: string;
     }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");

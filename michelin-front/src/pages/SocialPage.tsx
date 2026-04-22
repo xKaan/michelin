@@ -1,8 +1,10 @@
 import { Camera, Heart, MessageCircle, MoreHorizontal, Plus, UserPlus, X, Search, Star } from 'lucide-react'
-import { useMemo, useRef, useState } from 'react'
+import React, { useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router'
 import { useAuth } from '@/hooks/useAuth'
 import { useUsers } from '@/hooks/useUsers'
 import { useAllEstablishments } from '@/hooks/useRestaurants'
+import { useBatchAvatarUrls } from '@/hooks/useMascot'
 import {
   useSocialFeed,
   useMyLikes,
@@ -439,34 +441,44 @@ function PostCard({
   isLiked,
   onToggleLike,
   currentUserId,
+  avatarUrl,
 }: {
   post: SocialPost
   isLiked: boolean
   onToggleLike: () => void
   currentUserId: string
+  avatarUrl: string
 }) {
   const photo = post.media.find(m => m.type === 'photo')
   const deletePost = useDeletePost()
+  const navigate = useNavigate()
   const [showDeleteSheet, setShowDeleteSheet] = useState(false)
   const [showComments, setShowComments] = useState(false)
   const isOwner = post.user_id === currentUserId
+
+  function goToProfile() {
+    if (isOwner) navigate('/profile')
+    else navigate(`/profile/${post.user_id}`)
+  }
 
   return (
     <>
       <article className="rounded-3xl bg-card overflow-hidden">
         {/* Header */}
         <div className="flex items-center px-4 py-3 gap-3">
-          <div className="rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 via-rose-500 to-purple-600 flex-shrink-0">
-            <div className="rounded-full bg-card p-[2px]">
-              <img
-                src={avatar(post.user_id)}
-                alt={post.user.display_name}
-                className="size-9 rounded-full object-cover bg-muted"
-              />
-            </div>
-          </div>
+          <button
+            onClick={goToProfile}
+            className="size-10 rounded-full overflow-hidden flex-shrink-0 active:opacity-70 transition-opacity"
+            style={{ backgroundColor: post.user.avatar_color ?? '#dde0ef' }}
+          >
+            <img
+              src={avatarUrl}
+              alt={post.user.display_name}
+              className="size-full object-cover"
+            />
+          </button>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold leading-tight">{post.user.display_name}</p>
+            <button onClick={goToProfile} className="text-sm font-semibold leading-tight active:opacity-70 transition-opacity">{post.user.display_name}</button>
             <p className="text-xs text-muted-foreground truncate">
               {post.establishment.name}
               {post.establishment.city ? ` · ${post.establishment.city}` : ''}
@@ -614,9 +626,32 @@ export function SocialPage() {
 
   const [showCreatePost, setShowCreatePost] = useState(false)
   const [showFindFriends, setShowFindFriends] = useState(false)
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
+
+  const allUserIds = useMemo(() => {
+    const ids = new Set(following.map(f => f.id))
+    feed.forEach(p => ids.add(p.user_id))
+    if (user?.id) ids.add(user.id)
+    return [...ids]
+  }, [following, feed, user?.id])
+
+  const { data: avatarUrls = new Map<string, string>() } = useBatchAvatarUrls(allUserIds)
+
+  function resolveAvatar(userId: string) {
+    return avatarUrls.get(userId) ?? avatar(userId)
+  }
+
+  const filteredFeed = useMemo(
+    () => selectedUserId ? feed.filter(p => p.user_id === selectedUserId) : feed,
+    [feed, selectedUserId]
+  )
+
+  function toggleUserFilter(id: string) {
+    setSelectedUserId(prev => prev === id ? null : id)
+  }
 
   return (
-    <div className="flex flex-col min-h-screen bg-background pb-28 pt-6">
+    <div className="flex flex-col min-h-screen bg-background pb-28 pt-8">
       {/* Header */}
       <div className="px-4 pb-3 pt-1 flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">
@@ -632,7 +667,7 @@ export function SocialPage() {
       </div>
 
       {/* Stories row */}
-      <div className="overflow-x-auto px-4 pb-4 no-scrollbar">
+      <div className="overflow-x-auto px-4 pt-2 pb-4 no-scrollbar">
         <div className="flex gap-3">
           {/* Add story / create post */}
           <button
@@ -652,22 +687,43 @@ export function SocialPage() {
           </button>
 
           {/* Following */}
-          {following.map(f => (
-            <button key={f.id} className="flex flex-col items-center gap-1.5 flex-shrink-0">
-              <div className="rounded-full p-[2.5px] bg-gradient-to-tr from-yellow-400 via-rose-500 to-purple-600">
-                <div className="rounded-full bg-background p-[2px]">
+          {following.map(f => {
+            const isSelected = selectedUserId === f.id
+            const color = f.avatar_color ?? '#dde0ef'
+            return (
+              <button
+                key={f.id}
+                onClick={() => toggleUserFilter(f.id)}
+                className="flex flex-col items-center gap-1.5 flex-shrink-0"
+              >
+                <div
+                  className={[
+                    'size-[60px] rounded-full overflow-hidden transition-all flex-shrink-0',
+                    isSelected ? 'ring-[3px] ring-offset-2 ring-offset-background' : '',
+                  ].join(' ')}
+                  style={{
+                    backgroundColor: color,
+                    ...(isSelected ? { '--tw-ring-color': color } as React.CSSProperties : {}),
+                    boxShadow: isSelected ? `0 0 0 2px var(--background), 0 0 0 4px ${color}` : undefined,
+                  }}
+                >
                   <img
-                    src={avatar(f.id)}
+                    src={resolveAvatar(f.id)}
                     alt={f.display_name}
-                    className="size-14 rounded-full object-cover bg-muted"
+                    className="size-full object-cover"
                   />
                 </div>
-              </div>
-              <span className="text-[11px] font-medium text-foreground/80 max-w-[62px] truncate">
-                {f.display_name}
-              </span>
-            </button>
-          ))}
+                <span className={[
+                  'text-[11px] font-medium max-w-[62px] truncate transition-colors',
+                  isSelected ? 'font-bold' : 'text-foreground/80',
+                ].join(' ')}
+                  style={isSelected ? { color } : undefined}
+                >
+                  {f.display_name}
+                </span>
+              </button>
+            )
+          })}
 
           {/* Empty state in stories */}
           {following.length === 0 && (
@@ -690,6 +746,25 @@ export function SocialPage() {
         </div>
       </div>
 
+      {/* Active filter banner */}
+      {selectedUserId && (() => {
+        const u = following.find(f => f.id === selectedUserId)
+        return u ? (
+          <div className="mx-5 mb-3 flex items-center justify-between rounded-2xl bg-primary/10 px-4 py-2.5">
+            <p className="text-sm font-semibold text-primary">
+              Posts de {u.display_name}
+            </p>
+            <button
+              onClick={() => setSelectedUserId(null)}
+              className="rounded-full bg-primary/20 p-1"
+              aria-label="Effacer le filtre"
+            >
+              <X className="size-3.5 text-primary" />
+            </button>
+          </div>
+        ) : null
+      })()}
+
       {/* Feed */}
       <div className="flex flex-col gap-4 px-5 pt-3">
         {isLoading && (
@@ -698,22 +773,26 @@ export function SocialPage() {
           </div>
         )}
 
-        {!isLoading && feed.length === 0 && (
+        {!isLoading && filteredFeed.length === 0 && (
           <div className="py-16 text-center rounded-3xl border border-dashed border-border flex flex-col gap-2">
             <p className="text-sm font-semibold">Aucun post pour l'instant</p>
             <p className="text-xs text-muted-foreground">
-              Suis des amis ou crée ton premier post
+              {selectedUserId
+                ? 'Cet utilisateur n\'a pas encore posté'
+                : 'Suis des amis ou crée ton premier post'}
             </p>
-            <button
-              onClick={() => setShowCreatePost(true)}
-              className="mt-3 mx-auto rounded-full bg-primary px-5 py-2 text-xs font-bold text-white"
-            >
-              Créer un post
-            </button>
+            {!selectedUserId && (
+              <button
+                onClick={() => setShowCreatePost(true)}
+                className="mt-3 mx-auto rounded-full bg-primary px-5 py-2 text-xs font-bold text-white"
+              >
+                Créer un post
+              </button>
+            )}
           </div>
         )}
 
-        {feed.map(post => (
+        {filteredFeed.map(post => (
           <PostCard
             key={post.id}
             post={post}
@@ -722,6 +801,7 @@ export function SocialPage() {
               toggleLike.mutate({ reviewId: post.id, isLiked: myLikes.has(post.id) })
             }
             currentUserId={user?.id ?? ''}
+            avatarUrl={resolveAvatar(post.user_id)}
           />
         ))}
       </div>
