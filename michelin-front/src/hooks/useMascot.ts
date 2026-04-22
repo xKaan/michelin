@@ -111,10 +111,8 @@ export function useSetActiveMascot() {
   });
 }
 
-export function resolveMascotImage(row: { mascot: Mascot & { image_url?: string | null }; equipped_outfit: (UserOutfit & { outfit: Outfit }) | null }): string {
-  return row.equipped_outfit?.outfit?.preview_url
-    ?? row.mascot.image_url
-    ?? `/Buddy/${row.mascot.name}.png`;
+export function resolveMascotImage(row: { mascot: Mascot & { image_url?: string | null }; equipped_outfit: (UserOutfit & { outfit: Outfit }) | null }): string | undefined {
+  return row.equipped_outfit?.outfit?.preview_url ?? row.mascot.image_url ?? undefined;
 }
 
 export function resolveBuddyImage(mascot: UserMascotWithOutfit | null | undefined): string | undefined {
@@ -123,7 +121,7 @@ export function resolveBuddyImage(mascot: UserMascotWithOutfit | null | undefine
 
 export function resolveBuddyHead(mascot: (UserMascotWithOutfit & { mascot: Mascot & { head_url?: string | null } }) | null | undefined): string | undefined {
   if (!mascot) return undefined;
-  return mascot.mascot.head_url ?? `/Buddy/Heads/${mascot.mascot.name}_head.png`;
+  return mascot.mascot.head_url ?? undefined;
 }
 
 export function useUserOutfits(userMascotId: string | null) {

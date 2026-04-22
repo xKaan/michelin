@@ -108,7 +108,7 @@ function SelectionCard({
   disabled,
   onClick,
 }: {
-  img: string;
+  img: string | undefined;
   label: string;
   isSelected: boolean;
   disabled: boolean;
