@@ -96,7 +96,7 @@ export function useGenerateQrCode() {
       return data;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["qr-codes"] });
+      qc.invalidateQueries({ queryKey: ["active-qr"] });
     },
   });
 }

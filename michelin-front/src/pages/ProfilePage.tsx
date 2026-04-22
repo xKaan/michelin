@@ -5,7 +5,6 @@ import { ChevronLeft, MoreHorizontal, ChevronRight, BadgeCheck } from "lucide-re
 import { useMemo } from "react";
 import { useNavigate } from "react-router";
 import { QrCodeDisplay } from "@/components/QrCodeDisplay";
-import { XpProgress } from "@/components/XpProgress";
 
 // --- Types ---
 interface Badge {
@@ -242,18 +241,6 @@ export function ProfilePage() {
             {MOCK_NOTEBOOK.map((entry) => (
               <NotebookCard key={entry.id} entry={entry} />
             ))}
-          </div>
-        </section>
-
-        {/* XP progression & streak */}
-        <section className="mb-8">
-          <SectionHeader label={t("profile.progression", "Progression")} />
-          <div className="rounded-xl border border-border bg-card px-5 py-5">
-            <XpProgress
-              xp={xpTotal}
-              streak={profile?.streak?.current_count}
-              showActions
-            />
           </div>
         </section>
 
