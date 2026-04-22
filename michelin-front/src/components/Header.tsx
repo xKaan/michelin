@@ -1,5 +1,6 @@
 import { Search, X, Moon, Sun } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
+import { useLocation } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { useTheme } from '@/hooks/useTheme'
 
@@ -8,6 +9,8 @@ export function Header({ minimal = false }: { minimal?: boolean }) {
   const inputRef = useRef<HTMLInputElement>(null)
   const { t } = useTranslation()
   const { theme, toggle } = useTheme()
+  const { pathname } = useLocation()
+  const hideSearch = pathname === '/social'
 
   useEffect(() => {
     if (open) inputRef.current?.focus()
@@ -31,6 +34,8 @@ export function Header({ minimal = false }: { minimal?: boolean }) {
       </header>
     )
   }
+
+  if (hideSearch) return null
 
   return (
     <div className="fixed top-5 right-4 z-50">
