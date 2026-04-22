@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useProfile";
-import { ChevronLeft, MoreHorizontal, ChevronRight } from "lucide-react";
+import { ChevronLeft, MoreHorizontal, ChevronRight, BadgeCheck } from "lucide-react";
 import { useMemo } from "react";
 import { useNavigate } from "react-router";
 
@@ -38,13 +38,13 @@ function xpToLevel(xp: number): number {
 
 // --- Mock data (replace with real API data as needed) ---
 const MOCK_BADGES: Badge[] = [
-  { id: "1", label: "Première visite", date: "01/09/2025" },
-  { id: "2", label: "3 étoiles !", date: "10/02/2026" },
-  { id: "3", label: "Truffé", date: "21/03/2026" },
-  { id: "4", label: "Str…", date: "30/0…" },
+  { id: "1", label: "Première visite", date: "01/09/2025", image: "/Badges/badge_1.png" },
+  { id: "2", label: "3 étoiles !", date: "10/02/2026", image: "/Badges/badge_2.png" },
+  { id: "3", label: "Truffé", date: "21/03/2026", image: "/Badges/badge_3.png" },
+  { id: "4", label: "Str…", date: "30/0…", image: "/Badges/badge_4.png" },
 ];
 
-const MOCK_NOTEBOOK: NotebookEntry[] = [{ id: "1" }, { id: "2" }, { id: "3" }];
+const MOCK_NOTEBOOK: NotebookEntry[] = [{ id: "1", image: "/Restaurants/resto_1.webp" }, { id: "2", image: "/Restaurants/resto_2.webp" }, { id: "3", image: "/Restaurants/resto_3.webp" }];
 
 // --- Sub-components ---
 
@@ -235,7 +235,7 @@ export function ProfilePage() {
   const level = useMemo(() => xpToLevel(xpTotal), [xpTotal]);
 
   // Buddy image: replace with real path/URL when available
-  const buddyImg: string | undefined = undefined; // e.g. '/assets/buddy.png'
+  const buddyImg: string | undefined = '/Buddy_skins/Mitch_jap.png'; // e.g. '/assets/buddy.png'
 
   if (isLoading) return <LoadingState />;
   if (error) return <ErrorState message={error.message} />;
@@ -249,9 +249,9 @@ export function ProfilePage() {
       <div className="relative -mt-6 rounded-t-[40px] bg-background px-5 pt-6 pb-12 z-10 shadow-[0_-4px_24px_rgba(0,0,0,0.08)]">
         {/* Identity */}
         <div className="flex flex-col items-center text-center gap-1 mb-5">
-          <h1 className="text-2xl font-bold tracking-tight">
+          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             {displayName}
-            <VerifiedBadge />
+<BadgeCheck fill="#cb0028" stroke="white" />
           </h1>
           <p className="text-sm text-muted-foreground">{getTierLabel(tier)}</p>
         </div>
