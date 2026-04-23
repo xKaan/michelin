@@ -4,13 +4,14 @@ import { useSavedIds, useToggleSave } from '@/hooks/useWishlist'
 import {
   Bookmark, BookmarkCheck, ChevronLeft, ChevronRight,
   Globe, MapPin, MessageCircle, Phone, Award, Star, BadgeCheck,
-  UtensilsCrossed, BedDouble, X, PenLine, Users,
+  UtensilsCrossed, BedDouble, X, PenLine, Users, Gift, Lock, Check, Copy,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { CriticReview, EstablishmentView, MichelinStatus, ReviewWithMedia, Unlockable } from '@/types/database'
 import { Rosettes } from '@/components/shared/MichelinBadge'
 import { useCriticReviews, useReviews } from '@/hooks/useReviews'
-import { useEstablishmentUnlockables } from '@/hooks/useRewards'
+import { useEstablishmentUnlockables, useEstablishmentLoyalty, useClaimReward } from '@/hooks/useRewards'
+import type { LoyaltyReward } from '@/hooks/useRewards'
 import { useFollowing } from '@/hooks/useSocial'
 import { useBatchAvatarUrls } from '@/hooks/useMascot'
 import { CreatePostModal } from '@/components/social/CreatePostModal'
@@ -167,6 +168,158 @@ function FriendReviewCard({ review, isSelf, avatarUrl }: { review: ReviewWithMed
         <p className="text-[13px] font-semibold mb-1">{review.title}</p>
       )}
       <p className="text-[13px] text-foreground/75 leading-relaxed">{review.content}</p>
+    </div>
+  )
+}
+
+// ── Loyalty ───────────────────────────────────────────────────────────────────
+
+const REWARD_EMOJI: Record<string, string> = {
+  drink: '🍹', food: '🍮', discount: '🏷️', other: '🎁',
+}
+
+function loyaltyCode(userRewardId: string) {
+  return userRewardId.replace(/-/g, '').slice(0, 8).toUpperCase()
+}
+
+function LoyaltySection({ userId, establishmentId }: {
+  userId: string
+  establishmentId: string
+}) {
+  const { data, isLoading } = useEstablishmentLoyalty(userId, establishmentId)
+  const claimReward = useClaimReward()
+  const [revealed, setRevealed] = useState<string | null>(null)
+  const [copied, setCopied]     = useState(false)
+
+  if (isLoading || !data || data.rewards.length === 0) return null
+
+  const { rewards, visitCount } = data
+  const next = rewards.find(r => visitCount < r.min_checkins)
+  const toNext = next ? next.min_checkins - visitCount : 0
+
+  function copy(code: string) {
+    navigator.clipboard.writeText(code).catch(() => {})
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  function handleClaim(r: LoyaltyReward) {
+    if (r.userRewardId && r.status === 'available') {
+      claimReward.mutate(r.userRewardId)
+    }
+    setRevealed(prev => prev === r.id ? null : r.id)
+    setCopied(false)
+  }
+
+  return (
+    <div className="mx-5 mb-6">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3.5">
+        <div className="flex items-center gap-2">
+          <Gift className="size-4 text-primary" />
+          <h3 className="text-[15px] font-bold">Fidélité</h3>
+        </div>
+        <div className="flex items-center gap-1.5 bg-primary/10 rounded-full px-2.5 py-1">
+          <span className="text-[13px] font-bold text-primary">{visitCount}</span>
+          <span className="text-[11px] text-primary/70">visite{visitCount > 1 ? 's' : ''}</span>
+        </div>
+      </div>
+
+      {/* Progress dots */}
+      <div className="flex items-center gap-1.5 mb-4 flex-wrap">
+        {rewards.map((r, i) => {
+          const unlocked = visitCount >= r.min_checkins
+          return (
+            <div key={r.id} className="flex items-center gap-1.5">
+              {i > 0 && <div className={cn('h-px w-4', unlocked ? 'bg-primary/40' : 'bg-border')} />}
+              <div className={cn(
+                'size-7 rounded-full flex items-center justify-center text-[11px] font-bold border-2 transition-colors',
+                unlocked ? 'bg-primary border-primary text-white' : 'bg-muted border-border text-muted-foreground',
+              )}>
+                {unlocked ? '✓' : r.min_checkins}
+              </div>
+            </div>
+          )
+        })}
+        {next && (
+          <span className="text-[11px] text-muted-foreground ml-1">
+            encore {toNext} visite{toNext > 1 ? 's' : ''} pour la prochaine
+          </span>
+        )}
+      </div>
+
+      {/* Reward rows */}
+      <div className="space-y-2.5">
+        {rewards.map(r => {
+          const unlocked   = r.status !== null                // row exists in user_rewards
+          const available  = r.status === 'available'
+          const claimed    = r.status === 'claimed'
+          const locked     = !unlocked && visitCount < r.min_checkins
+          const isRevealed = revealed === r.id
+          const code       = r.userRewardId ? loyaltyCode(r.userRewardId) : ''
+
+          return (
+            <div key={r.id} className={cn(
+              'rounded-2xl border transition-colors overflow-hidden',
+              claimed ? 'bg-muted/30 border-border/20' : unlocked ? 'bg-card border-border/50' : 'bg-muted/40 border-border/30',
+            )}>
+              <div className="flex items-center gap-3 px-4 py-3">
+                <span className={cn('text-xl flex-shrink-0', (locked || claimed) && 'opacity-40')}>
+                  {REWARD_EMOJI[r.reward_type] ?? '🎁'}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className={cn('text-[13px] font-semibold', (locked || claimed) && 'text-muted-foreground')}>
+                    {r.name}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">{r.description}</p>
+                </div>
+
+                {claimed ? (
+                  <span className="flex-shrink-0 inline-flex items-center gap-1 text-[11px] font-semibold text-muted-foreground bg-muted rounded-full px-2.5 py-1">
+                    <Check className="size-3" />
+                    Utilisé
+                  </span>
+                ) : available ? (
+                  <button
+                    onPointerDown={e => e.stopPropagation()}
+                    onClick={e => { e.stopPropagation(); handleClaim(r) }}
+                    className="flex-shrink-0 rounded-full bg-primary px-3 py-1.5 text-[11px] font-bold text-white transition-transform active:scale-95"
+                  >
+                    {isRevealed ? 'Masquer' : 'Réclamer'}
+                  </button>
+                ) : (
+                  <div className="flex-shrink-0 flex items-center gap-1 text-[11px] text-muted-foreground">
+                    <Lock className="size-3" />
+                    <span>{r.min_checkins}ème visite</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Revealed code */}
+              {isRevealed && available && code && (
+                <div className="mx-4 mb-3 rounded-xl bg-primary/8 border border-primary/20 px-4 py-3">
+                  <p className="text-[11px] text-primary/70 font-medium mb-1.5">
+                    Montrez ce code à votre serveur
+                  </p>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="font-mono text-[15px] font-bold text-primary tracking-widest">
+                      {code}
+                    </span>
+                    <button
+                      onPointerDown={e => e.stopPropagation()}
+                      onClick={e => { e.stopPropagation(); copy(code) }}
+                      className="flex items-center gap-1 text-[11px] text-primary font-semibold active:opacity-60"
+                    >
+                      {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+                      {copied ? 'Copié !' : 'Copier'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -497,6 +650,11 @@ function EstablishmentCardContent({ establishment: e, onClose }: Props) {
                     ))}
                   </div>
                 </div>
+              )}
+
+              {/* Loyalty section */}
+              {user && e && (
+                <LoyaltySection userId={user.id} establishmentId={e.id} />
               )}
 
               {/* Reviews section */}
