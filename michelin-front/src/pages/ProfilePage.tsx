@@ -21,7 +21,7 @@ const BADGE_IMAGES: Record<string, string> = {
 };
 
 const BADGE_LABELS: Record<string, string> = {
-  first_visit:  "Première visite",
+  first_visit:  "Première visite !",
   three_stars:  "3 étoiles !",
   truffle:      "Truffé",
   streak_7:     "Streak ×7",
