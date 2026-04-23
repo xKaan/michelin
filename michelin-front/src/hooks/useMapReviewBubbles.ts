@@ -8,6 +8,7 @@ export interface MapReviewBubble {
   displayName: string;
   avatarColor: string;
   isGourmet: boolean;
+  isCritic: boolean;
   content: string;
   rating: number;
   lat: number;
@@ -22,6 +23,16 @@ interface FeedPost {
   rating: number;
   created_at: string;
   user: { id: string; display_name: string; avatar_color: string; tier: string };
+}
+
+interface CriticPost {
+  id: string;
+  user_id: string;
+  establishment_id: string;
+  content: string;
+  rating: number;
+  critic_name: string;
+  likes_count: number;
 }
 
 function useMapFeedPosts() {
@@ -57,38 +68,90 @@ function useMapFeedPosts() {
   });
 }
 
+function useMapCriticPosts() {
+  return useQuery<CriticPost[]>({
+    queryKey: ["map-critic-feed"],
+    refetchOnMount: "always",
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("critic_reviews")
+        .select("id, user_id, establishment_id, content, rating, critic_name, likes_count")
+        .eq("status", "published")
+        .not("content", "is", null)
+        .order("likes_count", { ascending: false });
+
+      if (error) throw error;
+      return (data ?? []) as CriticPost[];
+    },
+  });
+}
+
+type BubbleSlot =
+  | { type: "critic"; post: CriticPost }
+  | { type: "gourmet" | "user"; post: FeedPost };
+
 export function useMapReviewBubbles(): MapReviewBubble[] {
   const { data: posts = [] } = useMapFeedPosts();
+  const { data: criticPosts = [] } = useMapCriticPosts();
   const { data: establishments = [] } = useAllEstablishments();
 
   const estMap = new Map(establishments.map(e => [e.id, e]));
 
-  // One post per establishment: gourmet > most recent (posts already sorted desc)
-  const best = new Map<string, FeedPost>();
+  // Priority: critic > gourmet user > most-recent user (posts already sorted desc)
+  const best = new Map<string, BubbleSlot>();
+
   for (const post of posts) {
     const existing = best.get(post.establishment_id);
+    const isGourmet = post.user.tier === "gourmet";
     if (!existing) {
-      best.set(post.establishment_id, post);
-    } else if (post.user.tier === "gourmet" && existing.user.tier !== "gourmet") {
-      best.set(post.establishment_id, post);
+      best.set(post.establishment_id, { type: isGourmet ? "gourmet" : "user", post });
+    } else if (isGourmet && existing.type === "user") {
+      best.set(post.establishment_id, { type: "gourmet", post });
+    }
+  }
+
+  // Critic reviews take absolute priority — keep the first (most liked, sorted desc)
+  for (const post of criticPosts) {
+    const existing = best.get(post.establishment_id);
+    if (!existing || existing.type !== "critic") {
+      best.set(post.establishment_id, { type: "critic", post });
     }
   }
 
   const bubbles: MapReviewBubble[] = [];
-  for (const [estId, post] of best) {
+  for (const [estId, slot] of best) {
     const est = estMap.get(estId);
     if (!est?.lat || !est?.lng) continue;
-    bubbles.push({
-      postId: post.id,
-      userId: post.user_id,
-      displayName: post.user.display_name,
-      avatarColor: post.user.avatar_color,
-      isGourmet: post.user.tier === "gourmet",
-      content: post.content,
-      rating: post.rating,
-      lat: est.lat,
-      lng: est.lng,
-    });
+
+    if (slot.type === "critic") {
+      const cp = slot.post;
+      bubbles.push({
+        postId: cp.id,
+        userId: cp.user_id,
+        displayName: cp.critic_name,
+        avatarColor: "#cb0028",
+        isGourmet: false,
+        isCritic: true,
+        content: cp.content,
+        rating: cp.rating,
+        lat: est.lat,
+        lng: est.lng,
+      });
+    } else {
+      const fp = slot.post;
+      bubbles.push({
+        postId: fp.id,
+        userId: fp.user_id,
+        displayName: fp.user.display_name,
+        avatarColor: fp.user.avatar_color,
+        isGourmet: slot.type === "gourmet",
+        isCritic: false,
+        content: fp.content,
+        rating: fp.rating,
+        lat: est.lat,
+        lng: est.lng,
+      });
+    }
   }
 
   return bubbles;

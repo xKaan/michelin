@@ -1,3 +1,4 @@
+import { BadgeCheck } from "lucide-react";
 import type { MapReviewBubble } from "@/hooks/useMapReviewBubbles";
 
 interface Props {
@@ -21,31 +22,39 @@ export function ReviewBubble({ bubble, avatarUrl, x, y, onClick }: Props) {
       style={{ left: x, top: y - 116 }}
       aria-label={`Avis de ${bubble.displayName}`}
     >
-      {/* drop-shadow covers the whole shape (card + arrow) */}
       <div className="relative drop-shadow-[0_6px_24px_rgba(0,0,0,0.16)] dark:drop-shadow-[0_6px_24px_rgba(0,0,0,0.40)]">
 
         {/* Card */}
-        <div className="
-          bg-background/90 backdrop-blur-2xl backdrop-saturate-[1.8]
-          rounded-[20px] px-4 py-3 w-52 text-left
-          ring-1 ring-foreground/[0.06]
-          transition-transform duration-100 ease-out
-          group-active:scale-[0.96]
-        ">
+        <div className={[
+          "bg-background/90 backdrop-blur-2xl backdrop-saturate-[1.8]",
+          "rounded-[20px] px-4 py-3 w-52 text-left",
+          "transition-transform duration-100 ease-out group-active:scale-[0.96]",
+          bubble.isCritic
+            ? "ring-2 ring-primary/60"
+            : "ring-1 ring-foreground/[0.06]",
+        ].join(" ")}>
 
-          {/* Avatar + name + stars */}
+          {/* Avatar + name + badge */}
           <div className="flex items-center gap-2.5 mb-2.5">
-            <img
-              src={avatarUrl}
-              alt={bubble.displayName}
-              className="size-9 rounded-full object-cover shrink-0 ring-2 ring-background"
-            />
+            <div className={[
+              "shrink-0 rounded-full overflow-hidden",
+              bubble.isCritic ? "ring-2 ring-primary ring-offset-1 ring-offset-background" : "ring-2 ring-background",
+            ].join(" ")}>
+              <img
+                src={avatarUrl}
+                alt={bubble.displayName}
+                className="size-9 object-cover"
+              />
+            </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
                 <span className="text-[13px] font-semibold text-foreground truncate leading-tight tracking-[-0.01em]">
                   {bubble.displayName}
                 </span>
-                {bubble.isGourmet && (
+                {bubble.isCritic && (
+                  <BadgeCheck className="shrink-0 size-3.5 text-primary" />
+                )}
+                {!bubble.isCritic && bubble.isGourmet && (
                   <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-primary" />
                 )}
               </div>
@@ -61,7 +70,12 @@ export function ReviewBubble({ bubble, avatarUrl, x, y, onClick }: Props) {
                     </svg>
                   ))}
                 </div>
-                {bubble.isGourmet && (
+                {bubble.isCritic && (
+                  <span className="text-[9px] font-semibold text-primary leading-none tracking-wide">
+                    Critique vérifié
+                  </span>
+                )}
+                {!bubble.isCritic && bubble.isGourmet && (
                   <span className="text-[9px] font-semibold text-primary leading-none tracking-wide">
                     Gourmet
                   </span>
@@ -79,13 +93,15 @@ export function ReviewBubble({ bubble, avatarUrl, x, y, onClick }: Props) {
           </p>
         </div>
 
-        {/* Arrow pointer — only border-r + border-b visible = downward tip */}
-        <div className="
-          absolute left-1/2 -translate-x-1/2 -bottom-[6px]
-          size-3 rotate-45 rounded-br-[3px]
-          bg-background/90
-          border-r border-b border-foreground/[0.06]
-        " />
+        {/* Arrow pointer */}
+        <div className={[
+          "absolute left-1/2 -translate-x-1/2 -bottom-[6px]",
+          "size-3 rotate-45 rounded-br-[3px]",
+          "bg-background/90",
+          bubble.isCritic
+            ? "border-r border-b border-primary/60"
+            : "border-r border-b border-foreground/[0.06]",
+        ].join(" ")} />
       </div>
     </button>
   );
