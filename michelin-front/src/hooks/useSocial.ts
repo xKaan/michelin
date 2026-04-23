@@ -6,6 +6,7 @@ export interface SocialPost {
   id: string;
   user_id: string;
   establishment_id: string;
+  title: string | null;
   content: string | null;
   rating: number;
   likes_count: number;
@@ -35,7 +36,7 @@ export function useSocialFeed() {
       const { data, error } = await supabase
         .from("reviews")
         .select(`
-          id, user_id, establishment_id, content, rating, likes_count, published_at, created_at,
+          id, user_id, establishment_id, title, content, rating, likes_count, published_at, created_at,
           user:users!reviews_user_id_fkey(id, display_name, avatar_color),
           establishment:establishments!reviews_restaurant_id_fkey(name, city),
           media(id, url, type)
@@ -172,11 +173,13 @@ export function useCreatePost() {
   return useMutation({
     mutationFn: async ({
       establishment_id,
+      title,
       content,
       rating,
       imageFile,
     }: {
       establishment_id: string;
+      title: string;
       content: string;
       rating: number;
       imageFile?: File;
@@ -198,6 +201,7 @@ export function useCreatePost() {
           establishment_id,
           checkin_id: checkin.id,
           rating,
+          title,
           content,
           status: "published",
           published_at: new Date().toISOString(),

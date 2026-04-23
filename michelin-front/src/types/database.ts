@@ -89,6 +89,7 @@ export interface Review {
   establishment_id: string;
   checkin_id: string;
   rating: number;
+  title: string | null;
   content: string | null;
   status: ReviewStatus;
   likes_count: number;

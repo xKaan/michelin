@@ -44,6 +44,7 @@ function CreatePostModal({ onClose }: { onClose: () => void }) {
   const [search, setSearch] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [rating, setRating] = useState(3)
+  const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
@@ -78,9 +79,10 @@ function CreatePostModal({ onClose }: { onClose: () => void }) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!selectedId || !content.trim()) return
+    if (!selectedId || !title.trim() || !content.trim()) return
     await createPost.mutateAsync({
       establishment_id: selectedId,
+      title: title.trim(),
       content: content.trim(),
       rating,
       imageFile: imageFile ?? undefined,
@@ -158,6 +160,19 @@ function CreatePostModal({ onClose }: { onClose: () => void }) {
                 )}
               </div>
             )}
+          </div>
+
+          {/* Title */}
+          <div className="flex flex-col gap-2">
+            <label className="text-[11px] uppercase tracking-widest text-muted-foreground font-semibold">
+              Titre
+            </label>
+            <input
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              placeholder="Ex : Dîner parfait, enfin !"
+              className="rounded-2xl bg-muted px-4 py-3 text-sm outline-none placeholder:text-muted-foreground"
+            />
           </div>
 
           {/* Rating */}
@@ -242,7 +257,7 @@ function CreatePostModal({ onClose }: { onClose: () => void }) {
 
           <button
             type="submit"
-            disabled={!selectedId || !content.trim() || createPost.isPending}
+            disabled={!selectedId || !title.trim() || !content.trim() || createPost.isPending}
             className="rounded-2xl bg-primary py-4 text-sm font-bold text-white disabled:opacity-40 transition-opacity active:scale-[0.98]"
           >
             {createPost.isPending ? 'Publication...' : 'Publier'}
@@ -556,9 +571,14 @@ function PostCard({
           </p>
         </div>
 
+        {/* Title */}
+        {post.title && (
+          <p className="px-4 mt-2 text-base font-bold leading-tight">{post.title}</p>
+        )}
+
         {/* Caption */}
         {post.content && (
-          <p className="px-4 mt-1 text-sm leading-snug">
+          <p className={['px-4 text-sm leading-snug', post.title ? 'mt-0.5' : 'mt-1'].join(' ')}>
             <span className="font-semibold mr-1.5">{post.user.display_name}</span>
             {post.content}
           </p>
