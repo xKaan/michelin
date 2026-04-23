@@ -1,9 +1,10 @@
 import { useState, useMemo } from "react";
-import { Search, SlidersHorizontal } from "lucide-react";
+import { SlidersHorizontal } from "lucide-react";
 import { useAllEstablishments } from "@/hooks/useRestaurants";
 import type { EstablishmentView } from "@/types/database";
 import { EstablishmentRow } from '@/components/explore/EstablishmentRow'
 import { FilterChip } from '@/components/shared/FilterChip'
+import { SearchInput } from '@/components/shared/SearchInput'
 
 interface ExplorePageProps {
   onEstablishmentClick: (e: EstablishmentView) => void;
@@ -55,14 +56,11 @@ export function ExplorePage({ onEstablishmentClick }: ExplorePageProps) {
       <h1 className="text-2xl font-bold tracking-tight mb-4">Explorer</h1>
 
       {/* Search bar */}
-      <div className="relative mb-3">
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
-        <input
-          type="text"
+      <div className="mb-3">
+        <SearchInput
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={setQuery}
           placeholder="Nom, ville, cuisine…"
-          className="w-full rounded-xl border border-border bg-card pl-10 pr-4 py-3 text-sm outline-none focus:border-primary transition-colors"
         />
       </div>
 
