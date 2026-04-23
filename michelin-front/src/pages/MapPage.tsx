@@ -35,14 +35,16 @@ const MARKER_SPECS = {
 } as const
 
 function mapStyle(dark: boolean) {
-  return dark ? 'streets-v4-dark' : maptilersdk.MapStyle.STREETS
+  return dark ? maptilersdk.MapStyle.STREETS.DARK : maptilersdk.MapStyle.STREETS
 }
 
 function loadSavedPosition() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) return JSON.parse(raw) as { center: [number, number]; zoom: number }
-  } catch {}
+  } catch {
+    return DEFAULT
+  }
   return DEFAULT
 }
 
@@ -131,6 +133,26 @@ function drawTextMarker(size: number, text: string, fontSize: number): ImageData
   return ctx.getImageData(0, 0, px, px)
 }
 
+function isMissingRoadShieldImage(id: string): boolean {
+  const normalized = id.trim()
+  return (
+    normalized === '' ||
+    normalized.startsWith('road_') ||
+    /^[A-Z]{2}-/.test(normalized) ||
+    normalized.includes('highway')
+  )
+}
+
+function addMissingRoadShieldPlaceholder(map: maptilersdk.Map, id: string) {
+  if (!isMissingRoadShieldImage(id) || map.hasImage(id)) return
+
+  map.addImage(
+    id,
+    { width: 1, height: 1, data: new Uint8Array(4) },
+    { sdf: true },
+  )
+}
+
 async function prepareMarkerImages(map: maptilersdk.Map): Promise<void> {
   const starSrc = await new Promise<HTMLImageElement>((resolve, reject) => {
     const img = new Image()
@@ -168,7 +190,7 @@ function toGeoJSON(data: EstablishmentView[]): GeoJSON.FeatureCollection {
         type: 'Feature' as const,
         id: String(e.id),
         geometry: { type: 'Point' as const, coordinates: [e.lng!, e.lat!] },
-        properties: { id: e.id, status: e.michelin_status ?? '', type: e.establishment_type },
+        properties: { id: e.id, status: e.michelin_status ?? '', type: e.establishment_type ?? '' },
       })),
   }
 }
@@ -225,8 +247,8 @@ function setupEstablishmentLayers(
       type: 'symbol',
       source: SOURCE_ID,
       filter: ['all',
-        ['!=', ['get', 'type'], 'hotel'],
-        ['!', ['in', ['get', 'status'], ['literal', ['one', 'two', 'three', 'bib']]]],
+        ['!=', ['coalesce', ['get', 'type'], ''], 'hotel'],
+        ['!', ['in', ['coalesce', ['get', 'status'], ''], ['literal', ['one', 'two', 'three', 'bib']]]],
       ],
       layout: { 'icon-image': 'michelin-none', 'icon-allow-overlap': true, 'icon-anchor': 'center' },
     })
@@ -326,10 +348,9 @@ export function MapPage({ onEstablishmentClick, flyTarget }: Props) {
   const userPosRef = useRef<[number, number] | null>(null)
   const [located, setLocated] = useState(false)
   const [currentZoom, setCurrentZoom] = useState(loadSavedPosition().zoom)
+  const [mapForBubbles, setMapForBubbles] = useState<maptilersdk.Map | null>(null)
   const [, forceUpdate] = useReducer(x => x + 1, 0)
   const { theme } = useTheme()
-  const themeRef = useRef(theme)
-  themeRef.current = theme
   const navigate = useNavigate()
   const { user: authUser } = useAuth()
 
@@ -374,7 +395,7 @@ export function MapPage({ onEstablishmentClick, flyTarget }: Props) {
 
     const map = new maptilersdk.Map({
       container: containerRef.current,
-      style: mapStyle(themeRef.current === 'dark'),
+      style: mapStyle(theme === 'dark'),
       center: saved.center,
       zoom: saved.zoom,
       geolocateControl: false,
@@ -382,12 +403,13 @@ export function MapPage({ onEstablishmentClick, flyTarget }: Props) {
     })
     mapRef.current = map
 
-    map.on('styleimagemissing', (e: { id: string }) => {
-      map.addImage(e.id, { width: 1, height: 1, data: new Uint8Array(4) })
+    map.on('styleimagemissing', (event: { id: string }) => {
+      addMissingRoadShieldPlaceholder(map, event.id)
     })
 
     map.on('load', () => {
       mapLoadedRef.current = true
+      setMapForBubbles(map)
 
       applyStyleSetup(map, onEstablishmentClickRef, establishmentsRef, null)
 
@@ -405,12 +427,13 @@ export function MapPage({ onEstablishmentClick, flyTarget }: Props) {
 
     return () => {
       mapLoadedRef.current = false
+      setMapForBubbles(null)
       mapRef.current?.remove()
       mapRef.current = null
     }
-  }, [])
+  }, [theme])
 
-  const showBubbles = currentZoom >= BUBBLE_ZOOM_THRESHOLD && mapRef.current && mapLoadedRef.current
+  const showBubbles = currentZoom >= BUBBLE_ZOOM_THRESHOLD && mapForBubbles
 
   return (
     <div className="fixed inset-0 -z-10 sm:relative sm:inset-auto sm:z-auto sm:max-w-4xl sm:mx-auto sm:pt-8">
@@ -420,33 +443,47 @@ export function MapPage({ onEstablishmentClick, flyTarget }: Props) {
       />
 
       {/* Overlay: same footprint as containerRef (mobile: inset-0, sm: top-8 + h-[70vh]) */}
-      {showBubbles && (
-        <div className="absolute inset-0 sm:inset-auto sm:top-8 sm:left-0 sm:right-0 sm:h-[70vh] pointer-events-none overflow-hidden sm:rounded-2xl">
-          {bubbles.map(bubble => {
-            const map = mapRef.current!
-            const bounds = map.getBounds()
-            if (
-              bubble.lat < bounds.getSouth() || bubble.lat > bounds.getNorth() ||
-              bubble.lng < bounds.getWest() || bubble.lng > bounds.getEast()
-            ) return null
+      {showBubbles && (() => {
+        const map = mapForBubbles!
+        const bounds = map.getBounds()
+        const MIN_DIST = 110
+        const shown: Array<{ x: number; y: number }> = []
 
-            const point = map.project([bubble.lng, bubble.lat])
-            return (
-              <ReviewBubble
-                key={bubble.postId}
-                bubble={bubble}
-                avatarUrl={resolveAvatar(bubble.userId)}
-                x={point.x}
-                y={point.y}
-                onClick={() => {
-                  if (authUser && bubble.userId === authUser.id) navigate('/profile')
-                  else navigate(`/profile/${bubble.userId}`)
-                }}
-              />
-            )
-          })}
-        </div>
-      )}
+        return (
+          <div className="absolute inset-0 sm:inset-auto sm:top-8 sm:left-0 sm:right-0 sm:h-[70vh] pointer-events-none overflow-hidden sm:rounded-2xl">
+            {bubbles.map(bubble => {
+              if (
+                bubble.lat < bounds.getSouth() || bubble.lat > bounds.getNorth() ||
+                bubble.lng < bounds.getWest()  || bubble.lng > bounds.getEast()
+              ) return null
+
+              const point = map.project([bubble.lng, bubble.lat])
+
+              // Skip if too close to an already-shown bubble (critics shown first = highest priority)
+              if (shown.some(p => {
+                const dx = point.x - p.x, dy = point.y - p.y
+                return dx * dx + dy * dy < MIN_DIST * MIN_DIST
+              })) return null
+              shown.push({ x: point.x, y: point.y })
+
+              return (
+                <ReviewBubble
+                  key={bubble.postId}
+                  bubble={bubble}
+                  avatarUrl={resolveAvatar(bubble.userId)}
+                  x={point.x}
+                  y={point.y}
+                  onClickPost={() => navigate(`/social?post=${bubble.postId}`)}
+                  onClickProfile={() => {
+                    if (authUser && bubble.userId === authUser.id) navigate('/profile')
+                    else navigate(`/profile/${bubble.userId}`)
+                  }}
+                />
+              )
+            })}
+          </div>
+        )
+      })()}
 
       {located && (
         <button

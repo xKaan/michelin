@@ -1,16 +1,18 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useMemo } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { useSavedIds, useToggleSave } from '@/hooks/useWishlist'
 import {
   Bookmark, BookmarkCheck, ChevronLeft, ChevronRight,
   Globe, MapPin, MessageCircle, Phone, Award, Star, BadgeCheck,
-  UtensilsCrossed, BedDouble, X, PenLine,
+  UtensilsCrossed, BedDouble, X, PenLine, Users,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { CriticReview, EstablishmentView, MichelinStatus, Unlockable } from '@/types/database'
+import type { CriticReview, EstablishmentView, MichelinStatus, ReviewWithMedia, Unlockable } from '@/types/database'
 import { Rosettes } from '@/components/shared/MichelinBadge'
-import { useCriticReviews } from '@/hooks/useReviews'
+import { useCriticReviews, useReviews } from '@/hooks/useReviews'
 import { useEstablishmentUnlockables } from '@/hooks/useRewards'
+import { useFollowing } from '@/hooks/useSocial'
+import { useBatchAvatarUrls } from '@/hooks/useMascot'
 import { CreatePostModal } from '@/components/social/CreatePostModal'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -130,6 +132,45 @@ function CriticReviewCard({ review }: { review: CriticReview }) {
   )
 }
 
+// ── Friend review card ────────────────────────────────────────────────────────
+
+function FriendReviewCard({ review, isSelf, avatarUrl }: { review: ReviewWithMedia; isSelf?: boolean; avatarUrl?: string }) {
+  const date = review.published_at
+    ? new Date(review.published_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+    : ''
+  return (
+    <div className="bg-background rounded-2xl p-4 border border-border/50 shadow-sm">
+      <div className="flex items-center gap-3 mb-2.5">
+        <div className="size-[34px] rounded-full bg-muted flex-shrink-0 overflow-hidden">
+          {avatarUrl
+            ? <img src={avatarUrl} alt={review.user.display_name} className="size-full object-cover" />
+            : <span className="size-full flex items-center justify-center text-[11px] font-bold text-foreground/60">{initials(review.user.display_name)}</span>
+          }
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[13px] font-semibold truncate">{review.user.display_name}</span>
+            <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-foreground/50 bg-muted rounded-full px-1.5 py-0.5 flex-shrink-0">
+              <Users className="size-[10px]" />
+              {isSelf ? 'Moi' : 'Ami'}
+            </span>
+          </div>
+          <span className="text-[11px] text-muted-foreground">{date}</span>
+        </div>
+        <div className="flex gap-0.5 flex-shrink-0">
+          {Array.from({ length: review.rating }).map((_, i) => (
+            <Star key={i} className="size-[9px] fill-amber-400 text-amber-400" />
+          ))}
+        </div>
+      </div>
+      {review.title && (
+        <p className="text-[13px] font-semibold mb-1">{review.title}</p>
+      )}
+      <p className="text-[13px] text-foreground/75 leading-relaxed">{review.content}</p>
+    </div>
+  )
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 type Snap = 0 | 1 | 2
@@ -160,6 +201,15 @@ function EstablishmentCardContent({ establishment: e, onClose }: Props) {
   const { data: criticReviews = [] } = useCriticReviews(e?.id ?? null, criticType)
   const topCritic = criticReviews[0] ?? null
   const { data: unlockables = [] } = useEstablishmentUnlockables(e?.id ?? null)
+  const { data: allReviews = [] } = useReviews(e?.id ?? null)
+  const { data: following = [] } = useFollowing(user?.id ?? null)
+  const followingIds = useMemo(() => new Set(following.map(f => f.id)), [following])
+  const friendReviews = useMemo(
+    () => allReviews.filter(r => (followingIds.has(r.user_id) || r.user_id === user?.id) && r.content),
+    [allReviews, followingIds, user?.id],
+  )
+  const friendUserIds = useMemo(() => friendReviews.map(r => r.user_id), [friendReviews])
+  const { data: friendAvatars = new Map<string, string>() } = useBatchAvatarUrls(friendUserIds)
 
   function snapY(s: Snap): number {
     const vh = window.innerHeight
@@ -450,20 +500,52 @@ function EstablishmentCardContent({ establishment: e, onClose }: Props) {
               )}
 
               {/* Reviews section */}
-              {criticReviews.length > 0 && (
+              {(criticReviews.length > 0 || friendReviews.length > 0) && (
                 <div className="mx-5 pb-32">
                   <div className="flex items-center gap-2 mb-1">
                     <MessageCircle className="size-4 text-primary" />
                     <h3 className="text-[15px] font-bold">Ce qu'ils en pensent</h3>
                   </div>
                   <p className="text-[12px] text-muted-foreground pl-6 mb-4">
-                    {criticReviews.length} avis de critique{criticReviews.length > 1 ? 's' : ''}
+                    {criticReviews.length > 0 && `${criticReviews.length} critique${criticReviews.length > 1 ? 's' : ''}`}
+                    {criticReviews.length > 0 && friendReviews.length > 0 && ' · '}
+                    {friendReviews.length > 0 && `${friendReviews.length} ami${friendReviews.length > 1 ? 's' : ''}`}
                   </p>
-                  <div className="space-y-3">
-                    {criticReviews.map(r => (
-                      <CriticReviewCard key={r.id} review={r} />
-                    ))}
-                  </div>
+
+                  {/* Critic reviews */}
+                  {criticReviews.length > 0 && (
+                    <div className="space-y-3">
+                      {criticReviews.map(r => (
+                        <CriticReviewCard key={r.id} review={r} />
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Friend reviews */}
+                  {friendReviews.length > 0 && (
+                    <>
+                      {criticReviews.length > 0 && (
+                        <div className="flex items-center gap-2 mt-5 mb-3">
+                          <div className="flex-1 h-px bg-border/50" />
+                          <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                            <Users className="size-3" />
+                            Tes amis
+                          </span>
+                          <div className="flex-1 h-px bg-border/50" />
+                        </div>
+                      )}
+                      <div className="space-y-3">
+                        {friendReviews.map(r => (
+                          <FriendReviewCard
+                            key={r.id}
+                            review={r}
+                            isSelf={r.user_id === user?.id}
+                            avatarUrl={friendAvatars.get(r.user_id)}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </>

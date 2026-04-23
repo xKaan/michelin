@@ -154,5 +154,10 @@ export function useMapReviewBubbles(): MapReviewBubble[] {
     }
   }
 
-  return bubbles;
+  // Critics first, then gourmets — so the overlap filter keeps highest-priority bubbles
+  return bubbles.sort((a, b) => {
+    if (a.isCritic !== b.isCritic) return a.isCritic ? -1 : 1;
+    if (a.isGourmet !== b.isGourmet) return a.isGourmet ? -1 : 1;
+    return 0;
+  });
 }

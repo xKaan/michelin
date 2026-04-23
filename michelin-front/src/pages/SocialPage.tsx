@@ -1,5 +1,6 @@
 import { Plus, UserPlus, X } from 'lucide-react'
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router'
 import { useAuth } from '@/hooks/useAuth'
 import { useBatchAvatarUrls } from '@/hooks/useMascot'
 import {
@@ -25,13 +26,26 @@ export function SocialPage() {
   const [showCreatePost, setShowCreatePost] = useState(false)
   const [showFindFriends, setShowFindFriends] = useState(false)
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
+  const [highlightPostId, setHighlightPostId] = useState<string | null>(null)
+
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  useEffect(() => {
+    const postId = searchParams.get('post')
+    if (!postId || isLoading) return
+    setHighlightPostId(postId)
+    setSearchParams({}, { replace: true })
+    requestAnimationFrame(() => {
+      document.getElementById(`post-${postId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    })
+  }, [searchParams, isLoading, setSearchParams])
 
   const allUserIds = useMemo(() => {
     const ids = new Set(following.map(f => f.id))
     feed.forEach(p => ids.add(p.user_id))
     if (user?.id) ids.add(user.id)
     return [...ids]
-  }, [following, feed, user?.id])
+  }, [following, feed, user])
 
   const { data: avatarUrls = new Map<string, string>() } = useBatchAvatarUrls(allUserIds)
 
@@ -191,16 +205,21 @@ export function SocialPage() {
         )}
 
         {filteredFeed.map(post => (
-          <PostCard
+          <div
             key={post.id}
-            post={post}
-            isLiked={myLikes.has(post.id)}
-            onToggleLike={() =>
-              toggleLike.mutate({ reviewId: post.id, isLiked: myLikes.has(post.id) })
-            }
-            currentUserId={user?.id ?? ''}
-            avatarUrl={resolveAvatar(post.user_id)}
-          />
+            id={`post-${post.id}`}
+            className={highlightPostId === post.id ? 'ring-2 ring-primary/50 rounded-3xl transition-all' : ''}
+          >
+            <PostCard
+              post={post}
+              isLiked={myLikes.has(post.id)}
+              onToggleLike={() =>
+                toggleLike.mutate({ reviewId: post.id, isLiked: myLikes.has(post.id) })
+              }
+              currentUserId={user?.id ?? ''}
+              avatarUrl={resolveAvatar(post.user_id)}
+            />
+          </div>
         ))}
       </div>
 

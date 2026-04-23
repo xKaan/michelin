@@ -6,10 +6,11 @@ interface Props {
   avatarUrl: string;
   x: number;
   y: number;
-  onClick: () => void;
+  onClickPost: () => void;
+  onClickProfile: () => void;
 }
 
-export function ReviewBubble({ bubble, avatarUrl, x, y, onClick }: Props) {
+export function ReviewBubble({ bubble, avatarUrl, x, y, onClickPost, onClickProfile }: Props) {
   const text =
     bubble.content.length > 72
       ? bubble.content.slice(0, 72) + "…"
@@ -17,9 +18,9 @@ export function ReviewBubble({ bubble, avatarUrl, x, y, onClick }: Props) {
 
   return (
     <button
-      onClick={onClick}
+      onClick={onClickPost}
       className="absolute pointer-events-auto -translate-x-1/2 group"
-      style={{ left: x, top: y - 116 }}
+      style={{ left: x, top: y - 150 }}
       aria-label={`Avis de ${bubble.displayName}`}
     >
       <div className="relative drop-shadow-[0_6px_24px_rgba(0,0,0,0.16)] dark:drop-shadow-[0_6px_24px_rgba(0,0,0,0.40)]">
@@ -36,16 +37,25 @@ export function ReviewBubble({ bubble, avatarUrl, x, y, onClick }: Props) {
 
           {/* Avatar + name + badge */}
           <div className="flex items-center gap-2.5 mb-2.5">
-            <div className={[
-              "shrink-0 rounded-full overflow-hidden",
-              bubble.isCritic ? "ring-2 ring-primary ring-offset-1 ring-offset-background" : "ring-2 ring-background",
-            ].join(" ")}>
+            {/* Avatar — navigates to profile */}
+            <button
+              onPointerDown={e => e.stopPropagation()}
+              onClick={e => { e.stopPropagation(); onClickProfile() }}
+              className={[
+                "shrink-0 rounded-full overflow-hidden active:opacity-70 transition-opacity",
+                bubble.isCritic
+                  ? "ring-2 ring-primary ring-offset-1 ring-offset-background"
+                  : "ring-2 ring-background",
+              ].join(" ")}
+              aria-label={`Profil de ${bubble.displayName}`}
+            >
               <img
                 src={avatarUrl}
                 alt={bubble.displayName}
                 className="size-9 object-cover"
               />
-            </div>
+            </button>
+
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
                 <span className="text-[13px] font-semibold text-foreground truncate leading-tight tracking-[-0.01em]">

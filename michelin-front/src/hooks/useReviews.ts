@@ -12,7 +12,7 @@ export function useReviews(establishmentId: string | null) {
         .select(`
           *,
           media(*),
-          user:users(id, display_name, tier)
+          user:users!reviews_user_id_fkey(id, display_name, tier, critic_type)
         `)
         .eq("establishment_id", establishmentId!)
         .eq("status", "published")
