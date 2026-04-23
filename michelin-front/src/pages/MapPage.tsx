@@ -1,10 +1,15 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useReducer, useRef, useState } from 'react'
+import { useNavigate } from 'react-router'
 import { LocateFixed } from 'lucide-react'
 import * as maptilersdk from '@maptiler/sdk'
 import '@maptiler/sdk/dist/maptiler-sdk.css'
 import './MapPage.css'
 import { useAllEstablishments } from '@/hooks/useRestaurants'
 import { useTheme } from '@/hooks/useTheme'
+import { useAuth } from '@/hooks/useAuth'
+import { useMapReviewBubbles } from '@/hooks/useMapReviewBubbles'
+import { useBatchAvatarUrls } from '@/hooks/useMascot'
+import { ReviewBubble } from '@/components/ReviewBubble'
 import type { EstablishmentView } from '@/types/database'
 
 maptilersdk.config.apiKey = import.meta.env.VITE_MAPTILER_KEY
@@ -12,6 +17,7 @@ maptilersdk.config.apiKey = import.meta.env.VITE_MAPTILER_KEY
 const STORAGE_KEY = 'map_position'
 const LYON: [number, number] = [4.8357, 45.764]
 const DEFAULT = { center: LYON, zoom: 13 }
+const BUBBLE_ZOOM_THRESHOLD = 15
 const SOURCE_ID = 'establishments'
 const CLICKABLE_LAYERS = ['michelin-three', 'michelin-two', 'michelin-one', 'michelin-bib', 'michelin-hotel', 'michelin-none']
 
@@ -319,11 +325,20 @@ export function MapPage({ onEstablishmentClick, flyTarget }: Props) {
   const onEstablishmentClickRef = useRef(onEstablishmentClick)
   const userPosRef = useRef<[number, number] | null>(null)
   const [located, setLocated] = useState(false)
+  const [currentZoom, setCurrentZoom] = useState(loadSavedPosition().zoom)
+  const [, forceUpdate] = useReducer(x => x + 1, 0)
   const { theme } = useTheme()
   const themeRef = useRef(theme)
   themeRef.current = theme
+  const navigate = useNavigate()
+  const { user: authUser } = useAuth()
 
   const { data: establishments } = useAllEstablishments()
+  const bubbles = useMapReviewBubbles()
+  const bubbleUserIds = bubbles.map(b => b.userId)
+  const { data: avatarUrls = new Map<string, string>() } = useBatchAvatarUrls(bubbleUserIds)
+  const resolveAvatar = (userId: string) =>
+    avatarUrls.get(userId) ?? `https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(userId)}&size=56`
 
   useEffect(() => {
     if (!flyTarget?.lat || !flyTarget?.lng || !mapRef.current || !mapLoadedRef.current) return
@@ -385,6 +400,9 @@ export function MapPage({ onEstablishmentClick, flyTarget }: Props) {
       })
     })
 
+    map.on('move', forceUpdate)
+    map.on('zoom', () => setCurrentZoom(map.getZoom()))
+
     return () => {
       mapLoadedRef.current = false
       mapRef.current?.remove()
@@ -392,12 +410,44 @@ export function MapPage({ onEstablishmentClick, flyTarget }: Props) {
     }
   }, [])
 
+  const showBubbles = currentZoom >= BUBBLE_ZOOM_THRESHOLD && mapRef.current && mapLoadedRef.current
+
   return (
     <div className="fixed inset-0 -z-10 sm:relative sm:inset-auto sm:z-auto sm:max-w-4xl sm:mx-auto sm:pt-8">
       <div
         ref={containerRef}
         className="size-full sm:h-[70vh] sm:rounded-2xl sm:overflow-hidden sm:border sm:border-border sm:shadow-lg"
       />
+
+      {/* Overlay: same footprint as containerRef (mobile: inset-0, sm: top-8 + h-[70vh]) */}
+      {showBubbles && (
+        <div className="absolute inset-0 sm:inset-auto sm:top-8 sm:left-0 sm:right-0 sm:h-[70vh] pointer-events-none overflow-hidden sm:rounded-2xl">
+          {bubbles.map(bubble => {
+            const map = mapRef.current!
+            const bounds = map.getBounds()
+            if (
+              bubble.lat < bounds.getSouth() || bubble.lat > bounds.getNorth() ||
+              bubble.lng < bounds.getWest() || bubble.lng > bounds.getEast()
+            ) return null
+
+            const point = map.project([bubble.lng, bubble.lat])
+            return (
+              <ReviewBubble
+                key={bubble.postId}
+                bubble={bubble}
+                avatarUrl={resolveAvatar(bubble.userId)}
+                x={point.x}
+                y={point.y}
+                onClick={() => {
+                  if (authUser && bubble.userId === authUser.id) navigate('/profile')
+                  else navigate(`/profile/${bubble.userId}`)
+                }}
+              />
+            )
+          })}
+        </div>
+      )}
+
       {located && (
         <button
           onClick={() => {
