@@ -10,6 +10,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useMapReviewBubbles } from '@/hooks/useMapReviewBubbles'
 import { useBatchAvatarUrls } from '@/hooks/useMascot'
 import { ReviewBubble } from '@/components/ReviewBubble'
+import { MapSidebar } from '@/components/MapSidebar'
 import type { EstablishmentView } from '@/types/database'
 
 maptilersdk.config.apiKey = import.meta.env.VITE_MAPTILER_KEY
@@ -273,6 +274,18 @@ function updateEstablishmentData(map: maptilersdk.Map, data: EstablishmentView[]
   source?.setData(toGeoJSON(data))
 }
 
+function getVisibleEstablishments(
+  establishments: EstablishmentView[],
+  map: maptilersdk.Map,
+): EstablishmentView[] {
+  const bounds = map.getBounds()
+  return establishments.filter(e =>
+    e.lat != null && e.lng != null &&
+    e.lat >= bounds.getSouth() && e.lat <= bounds.getNorth() &&
+    e.lng >= bounds.getWest()  && e.lng <= bounds.getEast()
+  )
+}
+
 function addUserLocationLayers(map: maptilersdk.Map, pos: [number, number]) {
   if (!map.getSource('user-location')) {
     map.addSource('user-location', {
@@ -350,6 +363,7 @@ export function MapPage({ onEstablishmentClick, flyTarget }: Props) {
   const [currentZoom, setCurrentZoom] = useState(loadSavedPosition().zoom)
   const [mapForBubbles, setMapForBubbles] = useState<maptilersdk.Map | null>(null)
   const [, forceUpdate] = useReducer(x => x + 1, 0)
+  const [visibleEstablishments, setVisibleEstablishments] = useState<EstablishmentView[]>([])
   const { theme } = useTheme()
   const navigate = useNavigate()
   const { user: authUser } = useAuth()
@@ -375,6 +389,7 @@ export function MapPage({ onEstablishmentClick, flyTarget }: Props) {
     establishmentsRef.current = establishments
     if (mapRef.current && mapLoadedRef.current) {
       updateEstablishmentData(mapRef.current, establishments)
+      setVisibleEstablishments(getVisibleEstablishments(establishments, mapRef.current))
     }
   }, [establishments])
 
@@ -403,6 +418,12 @@ export function MapPage({ onEstablishmentClick, flyTarget }: Props) {
     })
     mapRef.current = map
 
+    const updateVisible = () => {
+      if (mapLoadedRef.current) {
+        setVisibleEstablishments(getVisibleEstablishments(establishmentsRef.current, map))
+      }
+    }
+
     map.on('styleimagemissing', (event: { id: string }) => {
       addMissingRoadShieldPlaceholder(map, event.id)
     })
@@ -412,6 +433,7 @@ export function MapPage({ onEstablishmentClick, flyTarget }: Props) {
       setMapForBubbles(map)
 
       applyStyleSetup(map, onEstablishmentClickRef, establishmentsRef, null)
+      updateVisible()
 
       navigator.geolocation.getCurrentPosition(({ coords }) => {
         const pos: [number, number] = [coords.longitude, coords.latitude]
@@ -422,6 +444,7 @@ export function MapPage({ onEstablishmentClick, flyTarget }: Props) {
       })
     })
 
+    map.on('moveend', updateVisible)
     map.on('move', forceUpdate)
     map.on('zoom', () => setCurrentZoom(map.getZoom()))
 
@@ -433,71 +456,75 @@ export function MapPage({ onEstablishmentClick, flyTarget }: Props) {
     }
   }, [theme])
 
+  function handleSidebarSelect(e: EstablishmentView) {
+    mapRef.current?.flyTo({ center: [e.lng!, e.lat!], zoom: 16, duration: 600 })
+    onEstablishmentClickRef.current(e)
+  }
   const showBubbles = currentZoom >= BUBBLE_ZOOM_THRESHOLD && mapForBubbles
 
   return (
-    <div className="fixed inset-0 -z-10 sm:relative sm:inset-auto sm:z-auto sm:max-w-4xl sm:mx-auto sm:pt-8">
-      <div
-        ref={containerRef}
-        className="size-full sm:h-[70vh] sm:rounded-2xl sm:overflow-hidden sm:border sm:border-border sm:shadow-lg"
-      />
+    <div className="fixed inset-0 -z-10 md:relative md:inset-auto md:z-auto md:flex md:flex-row md:h-[calc(100vh-4rem)] md:overflow-hidden">
+      <MapSidebar establishments={visibleEstablishments} onSelect={handleSidebarSelect} />
 
-      {/* Overlay: same footprint as containerRef (mobile: inset-0, sm: top-8 + h-[70vh]) */}
-      {showBubbles && (() => {
-        const map = mapForBubbles!
-        const bounds = map.getBounds()
-        const MIN_DIST = 110
-        const shown: Array<{ x: number; y: number }> = []
+      {/* Map area — relative anchor for overlay and locate button */}
+      <div className="relative size-full md:flex-1 md:h-full">
+        <div ref={containerRef} className="size-full" />
 
-        return (
-          <div className="absolute inset-0 sm:inset-auto sm:top-8 sm:left-0 sm:right-0 sm:h-[70vh] pointer-events-none overflow-hidden sm:rounded-2xl">
-            {bubbles.map(bubble => {
-              if (
-                bubble.lat < bounds.getSouth() || bubble.lat > bounds.getNorth() ||
-                bubble.lng < bounds.getWest()  || bubble.lng > bounds.getEast()
-              ) return null
+        {showBubbles && (() => {
+          const map = mapForBubbles!
+          const bounds = map.getBounds()
+          const MIN_DIST = 110
+          const shown: Array<{ x: number; y: number }> = []
 
-              const point = map.project([bubble.lng, bubble.lat])
+          return (
+            <div className="absolute inset-0 pointer-events-none overflow-hidden">
+              {bubbles.map(bubble => {
+                if (
+                  bubble.lat < bounds.getSouth() || bubble.lat > bounds.getNorth() ||
+                  bubble.lng < bounds.getWest()  || bubble.lng > bounds.getEast()
+                ) return null
 
-              // Skip if too close to an already-shown bubble (critics shown first = highest priority)
-              if (shown.some(p => {
-                const dx = point.x - p.x, dy = point.y - p.y
-                return dx * dx + dy * dy < MIN_DIST * MIN_DIST
-              })) return null
-              shown.push({ x: point.x, y: point.y })
+                const point = map.project([bubble.lng, bubble.lat])
 
-              return (
-                <ReviewBubble
-                  key={bubble.postId}
-                  bubble={bubble}
-                  avatarUrl={resolveAvatar(bubble.userId)}
-                  x={point.x}
-                  y={point.y}
-                  onClickPost={() => navigate(`/social?post=${bubble.postId}`)}
-                  onClickProfile={() => {
-                    if (authUser && bubble.userId === authUser.id) navigate('/profile')
-                    else navigate(`/profile/${bubble.userId}`)
-                  }}
-                />
-              )
-            })}
-          </div>
-        )
-      })()}
+                if (shown.some(p => {
+                  const dx = point.x - p.x, dy = point.y - p.y
+                  return dx * dx + dy * dy < MIN_DIST * MIN_DIST
+                })) return null
+                shown.push({ x: point.x, y: point.y })
 
-      {located && (
-        <button
-          onClick={() => {
-            if (userPosRef.current && mapRef.current) {
-              mapRef.current.flyTo({ center: userPosRef.current, zoom: 17 })
-            }
-          }}
-          className="absolute bottom-32 right-4 z-10 size-11 rounded-full bg-background shadow-xl border border-border/60 flex items-center justify-center text-primary hover:bg-muted transition-colors"
-          aria-label="Retour à ma position"
-        >
-          <LocateFixed className="size-5"/>
-        </button>
-      )}
+                return (
+                  <ReviewBubble
+                    key={bubble.postId}
+                    bubble={bubble}
+                    avatarUrl={resolveAvatar(bubble.userId)}
+                    x={point.x}
+                    y={point.y}
+                    onClickPost={() => navigate(`/social?post=${bubble.postId}`)}
+                    onClickProfile={() => {
+                      if (authUser && bubble.userId === authUser.id) navigate('/profile')
+                      else navigate(`/profile/${bubble.userId}`)
+                    }}
+                  />
+                )
+              })}
+            </div>
+          )
+        })()}
+
+        {located && (
+          <button
+            onClick={() => {
+              if (userPosRef.current && mapRef.current) {
+                mapRef.current.flyTo({ center: userPosRef.current, zoom: 17 })
+              }
+            }}
+            className="absolute bottom-32 right-4 md:bottom-6 md:right-6 z-10 size-11 rounded-full bg-background shadow-xl border border-border/60 flex items-center justify-center text-primary hover:bg-muted transition-colors"
+            aria-label="Retour à ma position"
+          >
+            <LocateFixed className="size-5"/>
+          </button>
+        )}
+      </div>
     </div>
   )
 }
