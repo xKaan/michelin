@@ -398,7 +398,7 @@ function EstablishmentCardContent({ establishment: e, onClose }: Props) {
   if (isDesktop) {
     if (!e) return null
     return (
-      <div className="fixed right-0 top-16 h-[calc(100vh-4rem)] w-96 border-l border-border/60 bg-background shadow-xl z-40 flex flex-col">
+      <div className="fixed right-0 top-16 h-[calc(100vh-4rem)] w-1/3 min-w-80 border-l border-border/60 bg-background shadow-xl z-40 flex flex-col">
         {/* Sticky header */}
         <div className="flex-shrink-0 px-5 pt-5 pb-4 border-b border-border/40 bg-background">
           <div className="flex items-start gap-3">
