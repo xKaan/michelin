@@ -66,8 +66,15 @@ function UnlockableCard({ item }: { item: Unlockable }) {
       <div className="size-12 rounded-xl overflow-hidden bg-muted flex-shrink-0 flex items-center justify-center">
         {item.preview_url ? (
           <img src={item.preview_url} alt={item.unlockable_name} className="size-full object-cover" />
+        ) : isMascot ? (
+          <img
+            src={`/Buddy/${item.unlockable_name}.png`}
+            alt={item.unlockable_name}
+            className="size-full object-contain scale-110"
+            style={{ filter: 'brightness(0)' }}
+          />
         ) : (
-          <span className="text-xl">{isMascot ? '🐾' : '👘'}</span>
+          <span className="text-xl">👘</span>
         )}
       </div>
       <div className="flex-1 min-w-0">
