@@ -310,7 +310,7 @@ export function ProfilePage() {
   if (error) return <ErrorState message={error.message} />;
 
   return (
-    <div className="max-w-lg mx-auto bg-background min-h-screen overflow-x-hidden">
+    <div className="max-w-lg md:max-w-2xl md:mx-auto mx-auto bg-background min-h-screen overflow-x-hidden">
       {/* Hero with buddy character */}
       <HeroBanner
         buddyImg={buddyImg}

@@ -13,7 +13,7 @@ export function SettingsPage() {
   const { theme, toggle } = useTheme()
 
   return (
-    <div className="max-w-lg mx-auto pt-28 px-4 pb-12">
+    <div className="max-w-lg md:max-w-2xl mx-auto pt-28 md:pt-10 px-4 pb-12">
       <h1 className="text-2xl font-semibold tracking-tight mb-8">{t('settings.title')}</h1>
 
       <div className="flex flex-col gap-4">

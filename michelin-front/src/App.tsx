@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router'
 import { Header } from '@/components/Header'
 import { BottomNav } from '@/components/BottomNav'
+import { DesktopNav } from '@/components/DesktopNav'
 import { EstablishmentCard } from '@/components/EstablishmentCard'
 import { MapPage } from '@/pages/MapPage'
 import { SettingsPage } from '@/pages/SettingsPage'
@@ -21,6 +22,7 @@ function App() {
   const isAuthPage = ['/login', '/register'].includes(location.pathname)
   const isLandingPage = location.pathname === '/' && !user
   const isProfilePage = location.pathname.startsWith('/profile')
+  const showNav = !isAuthPage && !isLandingPage && !isProfilePage
   const [selectedEstablishment, setSelectedEstablishment] = useState<EstablishmentView | null>(null)
 
   function handleEstablishmentClick(e: EstablishmentView) {
@@ -37,21 +39,25 @@ function App() {
 
   return (
     <>
-    {!isProfilePage && !isLandingPage && <Header minimal={isAuthPage} onSelectEstablishment={handleEstablishmentClick} />}
-    {!isAuthPage && !isLandingPage && !isProfilePage && <BottomNav />}
-    {!isAuthPage && !isLandingPage && !isProfilePage && (
-      <EstablishmentCard
-        establishment={selectedEstablishment}
-        onClose={() => setSelectedEstablishment(null)}
-      />
-    )}
+      {showNav && <DesktopNav onSelectEstablishment={handleEstablishmentClick} />}
+      {!isProfilePage && !isLandingPage && <Header minimal={isAuthPage} onSelectEstablishment={handleEstablishmentClick} />}
+      {showNav && <BottomNav />}
+      {showNav && (
+        <EstablishmentCard
+          establishment={selectedEstablishment}
+          onClose={() => setSelectedEstablishment(null)}
+        />
+      )}
       {isProfilePage ? (
         <Routes>
           <Route path="/profile" element={user ? <ProfilePage /> : <Navigate to="/login" replace />} />
           <Route path="/profile/:userId" element={user ? <ProfilePage /> : <Navigate to="/login" replace />} />
         </Routes>
       ) : (
-        <main className={isAuthPage && !isLandingPage ? 'pt-24' : ''}>
+        <main className={[
+          isAuthPage && !isLandingPage ? 'pt-24' : '',
+          showNav ? 'md:pt-16' : '',
+        ].filter(Boolean).join(' ')}>
           <Routes>
             <Route path="/" element={user ? <Navigate to="/map" replace /> : <LandingPage />} />
             <Route path="/login" element={user ? <Navigate to="/map" replace /> : <LoginPage />} />

@@ -24,7 +24,7 @@ export function SavedPage({ onEstablishmentClick }: SavedPageProps) {
   const hasMultipleLists = lists.filter(l => l.list_items.length > 0).length > 1
 
   return (
-    <div className="max-w-lg mx-auto px-4 pt-4 pb-32">
+    <div className="max-w-lg md:max-w-3xl mx-auto px-4 pt-4 pb-32 md:pb-8">
       <h1 className="text-2xl font-bold tracking-tight mb-1">Mes favoris</h1>
       <p className="text-sm text-muted-foreground mb-5">
         {totalItems === 0

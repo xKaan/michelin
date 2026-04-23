@@ -17,7 +17,8 @@ export function EstablishmentRow({ item, onClick }: EstablishmentRowProps) {
       onClick={onClick}
       className="w-full flex items-center gap-3 bg-card rounded-2xl p-3 border border-border/60 text-left hover:border-primary/40 hover:bg-primary/5 transition-colors active:scale-[0.99]"
     >
-      <div className="size-[72px] shrink-0 rounded-xl overflow-hidden bg-muted flex items-center justify-center">
+      {/* Thumbnail — larger on desktop */}
+      <div className="size-[72px] md:w-40 md:h-24 shrink-0 rounded-xl overflow-hidden bg-muted flex items-center justify-center">
         {item.image_url ? (
           <img src={item.image_url} alt={item.name} className="size-full object-cover" />
         ) : (
@@ -25,6 +26,7 @@ export function EstablishmentRow({ item, onClick }: EstablishmentRowProps) {
         )}
       </div>
 
+      {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-0.5">
           <span className="font-semibold text-sm leading-tight truncate">{item.name}</span>

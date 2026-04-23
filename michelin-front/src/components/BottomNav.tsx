@@ -32,7 +32,7 @@ export function BottomNav() {
   const avatarUrl = mascot?.head_url ?? `https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(user?.email ?? 'michelin')}`
 
   return (
-    <nav className="sm:hidden fixed bottom-5 left-4 right-4 z-50 flex items-center justify-between">
+    <nav className="md:hidden fixed bottom-5 left-4 right-4 z-50 flex items-center justify-between">
       {/* Pill */}
       <div className="flex flex-col items-stretch rounded-full bg-background shadow-xl border border-border/60 overflow-hidden">
 

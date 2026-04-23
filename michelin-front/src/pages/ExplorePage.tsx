@@ -71,7 +71,7 @@ export function ExplorePage({ onEstablishmentClick }: ExplorePageProps) {
   }, [all, query, typeFilter, distinctions]);
 
   return (
-    <div className="max-w-lg mx-auto px-4 pt-4 pb-32">
+    <div className="max-w-lg md:max-w-3xl mx-auto px-4 pt-4 pb-32 md:pb-8">
       <h1 className="text-2xl font-bold tracking-tight mb-4">Explorer</h1>
 
       {/* Search + funnel button */}
@@ -207,7 +207,7 @@ export function ExplorePage({ onEstablishmentClick }: ExplorePageProps) {
       {isLoading ? (
         <div className="flex flex-col gap-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-[90px] rounded-2xl bg-muted animate-pulse" />
+            <div key={i} className="h-[90px] md:h-24 rounded-2xl bg-muted animate-pulse" />
           ))}
         </div>
       ) : results.length === 0 ? (

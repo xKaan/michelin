@@ -76,7 +76,7 @@ export function Header({ minimal = false, onSelectEstablishment }: HeaderProps) 
   if (hideSearch) return null
 
   return (
-    <div className="fixed top-5 right-4 z-50">
+    <div className="fixed top-5 right-4 z-50 md:hidden">
       <div
         className="relative h-12 rounded-full bg-background shadow-xl border border-border/60 overflow-visible transition-[width] duration-300 ease-in-out"
         style={{ width: open ? 'calc(100vw - 2rem)' : '3rem' }}

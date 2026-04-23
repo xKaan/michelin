@@ -1,4 +1,5 @@
 import { useRef, useState, useMemo } from 'react'
+import { useIsDesktop } from '@/hooks/useIsDesktop'
 import { useAuth } from '@/hooks/useAuth'
 import { useSavedIds, useToggleSave } from '@/hooks/useWishlist'
 import {
@@ -363,6 +364,7 @@ function EstablishmentCardContent({ establishment: e, onClose }: Props) {
   )
   const friendUserIds = useMemo(() => friendReviews.map(r => r.user_id), [friendReviews])
   const { data: friendAvatars = new Map<string, string>() } = useBatchAvatarUrls(friendUserIds)
+  const isDesktop = useIsDesktop()
 
   function snapY(s: Snap): number {
     const vh = window.innerHeight
@@ -391,6 +393,192 @@ function EstablishmentCardContent({ establishment: e, onClose }: Props) {
   const meta        = e ? STATUS_META[e.michelin_status] : null
   const Icon        = e?.establishment_type === 'hotel' ? BedDouble : UtensilsCrossed
   const { open, until } = openStatus(e?.opening_hours ?? null)
+
+  // ── DESKTOP PANEL ──────────────────────────────────────────────────────────
+  if (isDesktop) {
+    if (!e) return null
+    return (
+      <div className="fixed right-0 top-16 h-[calc(100vh-4rem)] w-96 border-l border-border/60 bg-background shadow-xl z-40 flex flex-col">
+        {/* Sticky header */}
+        <div className="flex-shrink-0 px-5 pt-5 pb-4 border-b border-border/40 bg-background">
+          <div className="flex items-start gap-3">
+            <div className="flex-1 min-w-0">
+              <h2 className="text-[20px] font-bold tracking-tight leading-tight">{e.name}</h2>
+              <div className="flex items-center gap-2 flex-wrap mt-1.5">
+                {meta && meta.count > 0 && <Rosettes count={meta.count} size={14} />}
+                {meta?.isBib && <span className="text-[12px] font-bold text-amber-500">Bib Gourmand</span>}
+                {e.cuisines?.length ? (
+                  <span className="text-[13px] text-muted-foreground">{e.cuisines.slice(0, 2).join(' · ')}</span>
+                ) : null}
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <button
+                onClick={() => e && toggleSave.mutate({ establishmentId: e.id, isSaved: saved })}
+                className="size-9 rounded-full bg-muted flex items-center justify-center transition-transform hover:scale-105"
+                aria-label="Sauvegarder"
+              >
+                {saved
+                  ? <BookmarkCheck className="size-[15px] fill-primary text-primary" />
+                  : <Bookmark className="size-[15px] text-foreground/55" />
+                }
+              </button>
+              <button
+                onClick={onClose}
+                className="size-9 rounded-full bg-muted flex items-center justify-center transition-transform hover:scale-105"
+                aria-label="Fermer"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+          </div>
+          <div className="flex items-center justify-between mt-3 gap-3">
+            {e.opening_hours ? (
+              <div className="flex items-center gap-1.5">
+                <span className={cn('size-[7px] rounded-full flex-shrink-0', open ? 'bg-emerald-500' : 'bg-rose-400')} />
+                <span className="text-[13px]">
+                  {open
+                    ? <><span className="font-semibold text-emerald-600">Ouvert</span><span className="text-muted-foreground"> · Ferme à {until}</span></>
+                    : <span className="text-muted-foreground font-medium">Fermé</span>
+                  }
+                </span>
+              </div>
+            ) : <div />}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowPostModal(true)}
+                className="size-9 rounded-full bg-muted flex items-center justify-center"
+                aria-label="Écrire un post"
+              >
+                <PenLine className="size-[15px] text-foreground/70" />
+              </button>
+              <button className="bg-foreground text-background rounded-full px-5 py-[9px] text-[13px] font-bold tracking-wide">
+                Réserver
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto pb-8">
+          {/* Image */}
+          <div className="mx-5 mt-5 mb-5">
+            <div className="relative rounded-[20px] overflow-hidden bg-muted" style={{ aspectRatio: '16/9' }}>
+              {e.image_url
+                ? <img src={e.image_url} alt="" className="w-full h-full object-cover" />
+                : <div className="w-full h-full flex items-center justify-center bg-primary/8"><Icon className="size-16 text-primary/15" strokeWidth={1} /></div>
+              }
+            </div>
+          </div>
+
+          {/* Critic banner */}
+          {topCritic && (
+            <div className="mx-5 mb-5 flex items-center gap-3 bg-muted/50 rounded-[18px] px-4 py-3.5">
+              <div className="size-[30px] rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                <span className="text-[11px] font-black text-primary">{initials(topCritic.critic_name)}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] leading-snug">
+                  <span className="font-semibold">{topCritic.critic_name}</span>
+                  <span className="text-muted-foreground"> recommande cet endroit</span>
+                </p>
+                <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-primary mt-0.5">
+                  <BadgeCheck className="size-[10px]" />
+                  Critique vérifié
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Contact */}
+          <div className="mx-5 rounded-[18px] border border-border/50 overflow-hidden mb-5 bg-card">
+            {(e.address || e.city) && (
+              <div className="flex items-center gap-4 px-4 py-3.5 border-b border-border/40">
+                <div className="size-8 rounded-xl bg-muted flex items-center justify-center flex-shrink-0">
+                  <MapPin className="size-3.5 text-muted-foreground" />
+                </div>
+                <span className="text-[13px] text-foreground">{[e.address, e.city].filter(Boolean).join(', ')}</span>
+              </div>
+            )}
+            <div className="flex items-center gap-4 px-4 py-3.5 border-b border-border/40">
+              <div className="size-8 rounded-xl bg-muted flex items-center justify-center flex-shrink-0">
+                <Globe className="size-3.5 text-muted-foreground" />
+              </div>
+              <span className="text-[13px] text-primary font-medium">guide.michelin.com</span>
+            </div>
+            {e.phone && (
+              <a href={`tel:${e.phone}`} className="flex items-center gap-4 px-4 py-3.5">
+                <div className="size-8 rounded-xl bg-muted flex items-center justify-center flex-shrink-0">
+                  <Phone className="size-3.5 text-muted-foreground" />
+                </div>
+                <span className="text-[13px] text-primary font-medium">{e.phone}</span>
+              </a>
+            )}
+          </div>
+
+          {/* Unlockables */}
+          {unlockables.length > 0 && (
+            <div className="mx-5 mb-6">
+              <div className="flex items-center gap-2 mb-3.5">
+                <Award className="size-4 text-primary" />
+                <h3 className="text-[15px] font-bold">Déblocables ici</h3>
+              </div>
+              <div className="space-y-2.5">
+                {unlockables.map(item => (
+                  <UnlockableCard key={`${item.unlockable_type}-${item.unlockable_id}`} item={item} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Loyalty */}
+          {user && <LoyaltySection userId={user.id} establishmentId={e.id} />}
+
+          {/* Reviews */}
+          {(criticReviews.length > 0 || friendReviews.length > 0) && (
+            <div className="mx-5 pb-4">
+              <div className="flex items-center gap-2 mb-1">
+                <MessageCircle className="size-4 text-primary" />
+                <h3 className="text-[15px] font-bold">Ce qu'ils en pensent</h3>
+              </div>
+              <p className="text-[12px] text-muted-foreground pl-6 mb-4">
+                {criticReviews.length > 0 && `${criticReviews.length} critique${criticReviews.length > 1 ? 's' : ''}`}
+                {criticReviews.length > 0 && friendReviews.length > 0 && ' · '}
+                {friendReviews.length > 0 && `${friendReviews.length} ami${friendReviews.length > 1 ? 's' : ''}`}
+              </p>
+              {criticReviews.length > 0 && (
+                <div className="space-y-3">
+                  {criticReviews.map(r => <CriticReviewCard key={r.id} review={r} />)}
+                </div>
+              )}
+              {friendReviews.length > 0 && (
+                <>
+                  {criticReviews.length > 0 && (
+                    <div className="flex items-center gap-2 mt-5 mb-3">
+                      <div className="flex-1 h-px bg-border/50" />
+                      <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                        <Users className="size-3" />Tes amis
+                      </span>
+                      <div className="flex-1 h-px bg-border/50" />
+                    </div>
+                  )}
+                  <div className="space-y-3">
+                    {friendReviews.map(r => (
+                      <FriendReviewCard key={r.id} review={r} isSelf={r.user_id === user?.id} avatarUrl={friendAvatars.get(r.user_id)} />
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
+        {showPostModal && (
+          <CreatePostModal establishmentId={e.id} onClose={() => setShowPostModal(false)} />
+        )}
+      </div>
+    )
+  }
 
   return (
     <div
