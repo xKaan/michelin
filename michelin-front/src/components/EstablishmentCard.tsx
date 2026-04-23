@@ -1,14 +1,17 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
+import { useAuth } from '@/hooks/useAuth'
+import { useSavedIds, useToggleSave } from '@/hooks/useWishlist'
 import {
   Bookmark, BookmarkCheck, ChevronLeft, ChevronRight,
   Globe, MapPin, MessageCircle, Phone, Award, Star, BadgeCheck,
-  UtensilsCrossed, BedDouble, X,
+  UtensilsCrossed, BedDouble, X, PenLine,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { CriticReview, EstablishmentView, MichelinStatus, Unlockable } from '@/types/database'
 import { Rosettes } from '@/components/shared/MichelinBadge'
 import { useCriticReviews } from '@/hooks/useReviews'
 import { useEstablishmentUnlockables } from '@/hooks/useRewards'
+import { CreatePostModal } from '@/components/social/CreatePostModal'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -136,15 +139,22 @@ interface Props {
   onClose: () => void
 }
 
-export function EstablishmentCard({ establishment: e, onClose }: Props) {
-  const [snap, setSnap]         = useState<Snap>(0)
-  const [saved, setSaved]       = useState(false)
-  const [imgIdx, setImgIdx]     = useState(0)
-  const [dragDy, setDragDy]     = useState(0)
-  const [dragging, setDragging] = useState(false)
-  const dragY0 = useRef<number | null>(null)
+export function EstablishmentCard(props: Props) {
+  return <EstablishmentCardContent key={props.establishment?.id ?? 'empty'} {...props} />
+}
 
-  useEffect(() => { setSnap(0); setImgIdx(0); setSaved(false) }, [e?.id])
+function EstablishmentCardContent({ establishment: e, onClose }: Props) {
+  const [snap, setSnap]               = useState<Snap>(0)
+  const [imgIdx, setImgIdx]           = useState(0)
+  const [dragDy, setDragDy]           = useState(0)
+  const [dragging, setDragging]       = useState(false)
+  const [showPostModal, setShowPostModal] = useState(false)
+
+  const { user } = useAuth()
+  const savedIds   = useSavedIds(user?.id ?? null)
+  const toggleSave = useToggleSave()
+  const saved = e ? savedIds.has(e.id) : false
+  const dragY0 = useRef<number | null>(null)
 
   const criticType = e?.establishment_type === 'hotel' ? 'hotel' : 'restaurant'
   const { data: criticReviews = [] } = useCriticReviews(e?.id ?? null, criticType)
@@ -167,7 +177,10 @@ export function EstablishmentCard({ establishment: e, onClose }: Props) {
     setDragging(false); setDragDy(0); dragY0.current = null
     if (Math.abs(dy) < 8) return // tap: let onClick handle it
     if (dy < -55)     setSnap(s => Math.min(2, s + 1) as Snap)
-    else if (dy > 80) snap === 0 ? onClose() : setSnap(s => Math.max(0, s - 1) as Snap)
+    else if (dy > 80) {
+      if (snap === 0) onClose()
+      else setSnap(s => Math.max(0, s - 1) as Snap)
+    }
   }
 
   function advanceSnap() { setSnap(s => s === 0 ? 2 : Math.min(2, s + 1) as Snap) }
@@ -241,7 +254,7 @@ export function EstablishmentCard({ establishment: e, onClose }: Props) {
               <div className="flex items-center gap-1.5 flex-shrink-0 pt-0.5">
                 <button
                   onPointerDown={ev => ev.stopPropagation()}
-                  onClick={() => setSaved(v => !v)}
+                  onClick={() => e && toggleSave.mutate({ establishmentId: e.id, isSaved: saved })}
                   className="size-9 rounded-full bg-muted flex items-center justify-center transition-transform active:scale-90"
                   aria-label="Sauvegarder"
                 >
@@ -276,6 +289,14 @@ export function EstablishmentCard({ establishment: e, onClose }: Props) {
               ) : <div />}
 
               <div className="flex items-center gap-2 flex-shrink-0">
+                <button
+                  onPointerDown={ev => ev.stopPropagation()}
+                  onClick={() => setShowPostModal(true)}
+                  className="size-9 rounded-full bg-muted flex items-center justify-center transition-transform active:scale-90"
+                  aria-label="Écrire un post"
+                >
+                  <PenLine className="size-[15px] text-foreground/70" />
+                </button>
                 <button
                   onPointerDown={ev => ev.stopPropagation()}
                   className="bg-foreground text-background rounded-full px-5 py-[9px] text-[13px] font-bold tracking-wide transition-transform active:scale-95"
@@ -449,6 +470,13 @@ export function EstablishmentCard({ establishment: e, onClose }: Props) {
           )}
         </div>
       </div>
+
+      {showPostModal && e && (
+        <CreatePostModal
+          establishmentId={e.id}
+          onClose={() => setShowPostModal(false)}
+        />
+      )}
     </div>
   )
 }

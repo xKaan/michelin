@@ -8,14 +8,15 @@ import { useCreatePost } from '@/hooks/useSocial'
 
 interface CreatePostModalProps {
   onClose: () => void
+  establishmentId?: string
 }
 
-export function CreatePostModal({ onClose }: CreatePostModalProps) {
+export function CreatePostModal({ onClose, establishmentId }: CreatePostModalProps) {
   const { data: establishments = [] } = useAllEstablishments()
   const createPost = useCreatePost()
 
   const [search, setSearch] = useState('')
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(establishmentId ?? null)
   const [rating, setRating] = useState(3)
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
