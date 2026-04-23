@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { CriticReview, EstablishmentView, MichelinStatus, Unlockable } from '@/types/database'
+import { Rosettes } from '@/components/shared/MichelinBadge'
 import { useCriticReviews } from '@/hooks/useReviews'
 import { useEstablishmentUnlockables } from '@/hooks/useRewards'
 
@@ -54,16 +55,6 @@ const STATUS_META: Record<MichelinStatus, { count: number; isBib: boolean }> = {
   one:   { count: 1, isBib: false },
   bib:   { count: 0, isBib: true },
   none:  { count: 0, isBib: false },
-}
-
-function Rosettes({ count, size = 13 }: { count: number; size?: number }) {
-  return (
-    <span className="inline-flex items-center gap-0.5">
-      {Array.from({ length: count }).map((_, i) => (
-        <img key={i} src="/etoile_michelin.png" alt="" width={size} height={size} className="object-contain" />
-      ))}
-    </span>
-  )
 }
 
 // ── Unlockable card ───────────────────────────────────────────────────────────

@@ -458,7 +458,7 @@ export function MapPage({ onEstablishmentClick, flyTarget }: Props) {
           className="absolute bottom-32 right-4 z-10 size-11 rounded-full bg-background shadow-xl border border-border/60 flex items-center justify-center text-primary hover:bg-muted transition-colors"
           aria-label="Retour à ma position"
         >
-          <LocateFixed className="size-5" />
+          <LocateFixed className="size-5"/>
         </button>
       )}
     </div>

@@ -1,39 +1,12 @@
 import { useState, useMemo } from "react";
-import { Search, MapPin, UtensilsCrossed, BedDouble, SlidersHorizontal } from "lucide-react";
+import { Search, SlidersHorizontal } from "lucide-react";
 import { useAllEstablishments } from "@/hooks/useRestaurants";
-import { cn } from "@/lib/utils";
-import type { EstablishmentView, MichelinStatus } from "@/types/database";
+import type { EstablishmentView } from "@/types/database";
+import { EstablishmentRow } from '@/components/explore/EstablishmentRow'
+import { FilterChip } from '@/components/shared/FilterChip'
 
 interface ExplorePageProps {
   onEstablishmentClick: (e: EstablishmentView) => void;
-}
-
-// --- Michelin helpers ---
-
-const MICHELIN_META: Record<MichelinStatus, { label: string; stars: number; isBib: boolean }> = {
-  three: { label: "3 étoiles", stars: 3, isBib: false },
-  two:   { label: "2 étoiles", stars: 2, isBib: false },
-  one:   { label: "1 étoile",  stars: 1, isBib: false },
-  bib:   { label: "Bib",       stars: 0, isBib: true },
-  none:  { label: "",          stars: 0, isBib: false },
-};
-
-function MichelinBadge({ status }: { status: MichelinStatus }) {
-  if (status === "none") return null;
-  if (MICHELIN_META[status].isBib) {
-    return (
-      <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
-        Bib
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center gap-0.5">
-      {Array.from({ length: MICHELIN_META[status].stars }).map((_, i) => (
-        <img key={i} src="/etoile_michelin.png" alt="★" className="size-3 object-contain" />
-      ))}
-    </span>
-  );
 }
 
 // --- Filter types ---
@@ -52,99 +25,6 @@ const STAR_LABELS: Record<StarFilter, string> = {
   starred: "Étoilés",
   bib:     "Bib Gourmand",
 };
-
-// --- Row card ---
-
-function EstablishmentRow({
-  item,
-  onClick,
-}: {
-  item: EstablishmentView;
-  onClick: () => void;
-}) {
-  const hasDistinction = item.michelin_status !== "none";
-  const Icon = item.establishment_type === "hotel" ? BedDouble : UtensilsCrossed;
-
-  return (
-    <button
-      onClick={onClick}
-      className="w-full flex items-center gap-3 bg-card rounded-2xl p-3 border border-border/60 text-left hover:border-primary/40 hover:bg-primary/5 transition-colors active:scale-[0.99]"
-    >
-      {/* Image or icon placeholder */}
-      <div className="size-[72px] flex-shrink-0 rounded-xl overflow-hidden bg-muted flex items-center justify-center">
-        {item.image_url ? (
-          <img src={item.image_url} alt={item.name} className="size-full object-cover" />
-        ) : (
-          <Icon className="size-7 text-muted-foreground/50" strokeWidth={1.5} />
-        )}
-      </div>
-
-      {/* Info */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-0.5">
-          <span className="font-semibold text-sm leading-tight truncate">{item.name}</span>
-          {hasDistinction && <MichelinBadge status={item.michelin_status} />}
-        </div>
-
-        {item.cuisines && item.cuisines.length > 0 && (
-          <div className="flex gap-1 flex-wrap mb-1">
-            {item.cuisines.slice(0, 2).map((c) => (
-              <span
-                key={c}
-                className="text-[10px] font-medium bg-muted text-muted-foreground rounded-full px-2 py-0.5"
-              >
-                {c}
-              </span>
-            ))}
-          </div>
-        )}
-
-        <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-          <MapPin className="size-3 flex-shrink-0" />
-          <span className="truncate">{item.city ?? item.address ?? "—"}</span>
-        </div>
-      </div>
-
-      {/* Type pill */}
-      <span
-        className={cn(
-          "flex-shrink-0 text-[10px] font-semibold px-2 py-1 rounded-full",
-          item.establishment_type === "hotel"
-            ? "bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-300"
-            : "bg-muted text-muted-foreground",
-        )}
-      >
-        {item.establishment_type === "hotel" ? "Hôtel" : "Restaurant"}
-      </span>
-    </button>
-  );
-}
-
-// --- Filter chip ---
-
-function Chip({
-  label,
-  active,
-  onClick,
-}: {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "flex-shrink-0 text-xs font-semibold px-3.5 py-2 rounded-full border transition-colors",
-        active
-          ? "bg-primary text-white border-primary"
-          : "bg-card text-foreground border-border/60 hover:border-primary/40",
-      )}
-    >
-      {label}
-    </button>
-  );
-}
 
 // --- Page ---
 
@@ -189,7 +69,7 @@ export function ExplorePage({ onEstablishmentClick }: ExplorePageProps) {
       {/* Filters */}
       <div className="flex gap-2 overflow-x-auto pb-1 mb-4 scrollbar-none">
         {(Object.keys(TYPE_LABELS) as TypeFilter[]).map((t) => (
-          <Chip
+          <FilterChip
             key={t}
             label={TYPE_LABELS[t]}
             active={typeFilter === t}
@@ -197,7 +77,7 @@ export function ExplorePage({ onEstablishmentClick }: ExplorePageProps) {
           />
         ))}
         <div className="w-px bg-border/60 flex-shrink-0" />
-        <Chip
+        <FilterChip
           label={
             starFilter === "all"
               ? "Distinction"
@@ -212,7 +92,7 @@ export function ExplorePage({ onEstablishmentClick }: ExplorePageProps) {
       {showStarFilters && (
         <div className="flex gap-2 mb-4 overflow-x-auto pb-1 scrollbar-none">
           {(Object.keys(STAR_LABELS) as StarFilter[]).map((s) => (
-            <Chip
+            <FilterChip
               key={s}
               label={STAR_LABELS[s]}
               active={starFilter === s}
