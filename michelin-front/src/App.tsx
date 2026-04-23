@@ -10,6 +10,7 @@ import { SocialPage } from '@/pages/SocialPage'
 import { ExplorePage } from '@/pages/ExplorePage'
 import { LoginPage } from '@/pages/LoginPage'
 import { RegisterPage } from '@/pages/RegisterPage'
+import { LandingPage } from '@/pages/LandingPage'
 import { useAuth } from '@/hooks/useAuth'
 import type { EstablishmentView } from '@/types/database'
 
@@ -17,6 +18,7 @@ function App() {
   const location = useLocation()
   const { user, loading } = useAuth()
   const isAuthPage = ['/login', '/register'].includes(location.pathname)
+  const isLandingPage = location.pathname === '/' && !user
   const isProfilePage = location.pathname.startsWith('/profile')
   const [selectedEstablishment, setSelectedEstablishment] = useState<EstablishmentView | null>(null)
 
@@ -34,9 +36,9 @@ function App() {
 
   return (
     <>
-    {!isProfilePage && <Header minimal={isAuthPage} onSelectEstablishment={handleEstablishmentClick} />}
-    {!isAuthPage && !isProfilePage && <BottomNav />}
-    {!isAuthPage && !isProfilePage && (
+    {!isProfilePage && !isLandingPage && <Header minimal={isAuthPage} onSelectEstablishment={handleEstablishmentClick} />}
+    {!isAuthPage && !isLandingPage && !isProfilePage && <BottomNav />}
+    {!isAuthPage && !isLandingPage && !isProfilePage && (
       <EstablishmentCard
         establishment={selectedEstablishment}
         onClose={() => setSelectedEstablishment(null)}
@@ -48,9 +50,9 @@ function App() {
           <Route path="/profile/:userId" element={user ? <ProfilePage /> : <Navigate to="/login" replace />} />
         </Routes>
       ) : (
-        <main className={isAuthPage ? 'pt-24' : ''}>
+        <main className={isAuthPage && !isLandingPage ? 'pt-24' : ''}>
           <Routes>
-            <Route path="/" element={<Navigate to={user ? '/map' : '/login'} replace />} />
+            <Route path="/" element={user ? <Navigate to="/map" replace /> : <LandingPage />} />
             <Route path="/login" element={user ? <Navigate to="/map" replace /> : <LoginPage />} />
             <Route path="/register" element={user ? <Navigate to="/map" replace /> : <RegisterPage />} />
             <Route
