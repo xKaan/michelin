@@ -37,8 +37,16 @@ export function Header({ minimal = false, onSelectEstablishment }: HeaderProps) 
 
   useEffect(() => {
     if (open) inputRef.current?.focus()
-    else setQuery('')
   }, [open])
+
+  function toggleSearch() {
+    if (open) {
+      setOpen(false)
+      setQuery('')
+      return
+    }
+    setOpen(true)
+  }
 
   function selectEstablishment(e: EstablishmentView) {
     onSelectEstablishment?.(e)
@@ -84,7 +92,7 @@ export function Header({ minimal = false, onSelectEstablishment }: HeaderProps) 
             style={{ opacity: open ? 1 : 0, transition: 'opacity 0.15s' }}
           />
           <button
-            onClick={() => setOpen(v => !v)}
+            onClick={toggleSearch}
             className="absolute inset-y-0 right-0 w-12 flex items-center justify-center"
             aria-label={t('header.search')}
           >

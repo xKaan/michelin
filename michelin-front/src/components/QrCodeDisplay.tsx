@@ -1,5 +1,6 @@
 import { QRCodeSVG } from "qrcode.react";
 import { Shield } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useAuth, useGenerateQrCode } from "@/hooks/useAuth";
 import { useActiveQrCode } from "@/hooks/useRewards";
 import { cn } from "@/lib/utils";
@@ -27,9 +28,19 @@ export function QrCodeDisplay({ tier = "explorer", className }: QrCodeDisplayPro
   const { user } = useAuth();
   const { data: qrCode, isLoading } = useActiveQrCode(user?.id ?? null);
   const generate = useGenerateQrCode();
+  const [now, setNow] = useState(0);
 
-  const expiresIn = qrCode
-    ? Math.max(0, Math.floor((new Date(qrCode.expires_at).getTime() - Date.now()) / 60_000))
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setNow(Date.now()), 0);
+    const interval = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => {
+      window.clearTimeout(timeout);
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  const expiresIn = qrCode && now
+    ? Math.max(0, Math.floor((new Date(qrCode.expires_at).getTime() - now) / 60_000))
     : 0;
 
   return (
