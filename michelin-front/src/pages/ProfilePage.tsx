@@ -156,7 +156,7 @@ function HeroBanner({ buddyImg, onAppearance, isOwnProfile, avatarColor, isFollo
   const navigate = useNavigate();
   const haloColor = lightenHex(avatarColor, 0.55);
   return (
-    <div className="relative w-full h-[320px] overflow-hidden flex items-end justify-center" style={{ backgroundColor: avatarColor }}>
+    <div className="relative w-full h-[320px] md:h-[220px] overflow-hidden flex items-end justify-center" style={{ backgroundColor: avatarColor }}>
       <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-20">
         <BackButton onClick={() => navigate(-1)} />
         {isOwnProfile && <MoreButton onAppearance={onAppearance} />}
@@ -169,14 +169,14 @@ function HeroBanner({ buddyImg, onAppearance, isOwnProfile, avatarColor, isFollo
       </div>
 
       <div
-        className="absolute bottom-0 left-1/2 -translate-x-1/2 w-64 h-64 rounded-full blur-3xl pointer-events-none"
+        className="absolute bottom-0 left-1/2 -translate-x-1/2 w-64 h-64 md:w-48 md:h-48 rounded-full blur-3xl pointer-events-none"
         style={{ backgroundColor: haloColor, opacity: 0.6 }}
       />
       {buddyImg ? (
         <img
           src={buddyImg}
           alt="Buddy"
-          className="h-[280px] w-auto object-contain select-none relative z-10"
+          className="h-[280px] md:h-[180px] w-auto object-contain select-none relative z-10"
           draggable={false}
         />
       ) : (
@@ -310,7 +310,9 @@ export function ProfilePage() {
   if (error) return <ErrorState message={error.message} />;
 
   return (
-    <div className="max-w-lg md:max-w-2xl md:mx-auto mx-auto bg-background min-h-screen overflow-x-hidden">
+    <>
+      {/* md:pt-16 offsets the fixed DesktopNav (h-16) — ProfilePage bypasses the shared <main> wrapper in App.tsx */}
+      <div className="mx-auto max-w-lg bg-background min-h-screen overflow-x-hidden md:mx-auto md:max-w-3xl md:pt-16">
       {/* Hero with buddy character */}
       <HeroBanner
         buddyImg={buddyImg}
@@ -341,40 +343,47 @@ export function ProfilePage() {
           <XPLevelPill xp={xpTotal} level={level} />
         </div>
 
-        {/* Badges section */}
-        <section className="mb-8">
-          <SectionHeader label={isOwnProfile ? t("profile.badges", "Mes badges") : "Badges"} href="#" />
-          {badges.length > 0 ? (
-            <div className="flex gap-4 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-none">
-              {badges.map((badge) => (
-                <BadgeCard key={badge.id} badge={badge} />
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">Aucun badge pour l'instant.</p>
-          )}
-        </section>
-
-        {/* Notebook section */}
-        <section className={isOwnProfile ? "mb-8" : "mb-0"}>
-          <SectionHeader label={isOwnProfile ? t("profile.notebook", "Mon carnet") : "Carnet"} href="#" />
-          <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-none">
-            {MOCK_NOTEBOOK.map((entry) => (
-              <NotebookCard key={entry.id} entry={entry} />
-            ))}
-          </div>
-        </section>
-
-        {/* QR Code — own profile only */}
-        {isOwnProfile && (
-          <section>
-            <SectionHeader label={t("profile.qrcode", "Mon QR code")} />
-            <div className="rounded-xl border border-border bg-card px-5 py-6 flex flex-col items-center">
-              <QrCodeDisplay tier={tier} />
-            </div>
+        {/* 2-column grid on desktop: badges left, notebook + QR right */}
+        <div className="md:grid md:grid-cols-2 md:gap-8">
+          {/* Badges section — left column */}
+          <section className="mb-8 md:mb-0">
+            <SectionHeader label={isOwnProfile ? t("profile.badges", "Mes badges") : "Badges"} href="#" />
+            {badges.length > 0 ? (
+              <div className="flex gap-4 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-none md:flex-wrap md:overflow-x-visible md:pb-0">
+                {badges.map((badge) => (
+                  <BadgeCard key={badge.id} badge={badge} />
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Aucun badge pour l'instant.</p>
+            )}
           </section>
-        )}
+
+          {/* Right column: notebook + QR */}
+          <div className="flex flex-col gap-8">
+            {/* Notebook section */}
+            <section>
+              <SectionHeader label={isOwnProfile ? t("profile.notebook", "Mon carnet") : "Carnet"} href="#" />
+              <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-none md:mx-0 md:px-0">
+                {MOCK_NOTEBOOK.map((entry) => (
+                  <NotebookCard key={entry.id} entry={entry} />
+                ))}
+              </div>
+            </section>
+
+            {/* QR Code — own profile only */}
+            {isOwnProfile && (
+              <section>
+                <SectionHeader label={t("profile.qrcode", "Mon QR code")} />
+                <div className="rounded-xl border border-border bg-card px-5 py-6 flex flex-col items-center">
+                  <QrCodeDisplay tier={tier} />
+                </div>
+              </section>
+            )}
+          </div>
+        </div>
       </div>
     </div>
+    </>
   );
 }

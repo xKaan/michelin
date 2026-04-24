@@ -22,7 +22,8 @@ function App() {
   const isAuthPage = ['/login', '/register'].includes(location.pathname)
   const isLandingPage = location.pathname === '/' && !user
   const isProfilePage = location.pathname.startsWith('/profile')
-  const showNav = !isAuthPage && !isLandingPage && !isProfilePage
+  const showDesktopNav = !isAuthPage && !isLandingPage
+  const showBottomChrome = showDesktopNav && !isProfilePage
   const [selectedEstablishment, setSelectedEstablishment] = useState<EstablishmentView | null>(null)
 
   function handleEstablishmentClick(e: EstablishmentView) {
@@ -39,10 +40,10 @@ function App() {
 
   return (
     <>
-      {showNav && <DesktopNav onSelectEstablishment={handleEstablishmentClick} />}
+      {showDesktopNav && <DesktopNav onSelectEstablishment={handleEstablishmentClick} />}
       {!isProfilePage && !isLandingPage && <Header minimal={isAuthPage} onSelectEstablishment={handleEstablishmentClick} />}
-      {showNav && <BottomNav />}
-      {showNav && (
+      {showBottomChrome && <BottomNav />}
+      {showBottomChrome && (
         <EstablishmentCard
           establishment={selectedEstablishment}
           onClose={() => setSelectedEstablishment(null)}
@@ -56,7 +57,7 @@ function App() {
       ) : (
         <main className={[
           isAuthPage && !isLandingPage ? 'pt-24' : '',
-          showNav ? 'md:pt-16' : '',
+          showBottomChrome ? 'md:pt-16' : '',
         ].filter(Boolean).join(' ')}>
           <Routes>
             <Route path="/" element={user ? <Navigate to="/map" replace /> : <LandingPage />} />
